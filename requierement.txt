@@ -1,0 +1,6 @@
+fastapi
+pydantic
+fastapi
+unicorn
+pymongo
+email_validator

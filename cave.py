@@ -7,6 +7,8 @@ class Cave(BaseModel):
     num: int = Field(default=-1)
     nb_emplacement: int = Field(default=-1)
     etageres: dict[int, Etagere] = Field(default={})
+    config_db: dict = Field(default={})
+    collections: str = Field(default="caves")
 
     def ajouter_etagere(self, num_eta: int) -> dict:
         if num_eta in self.etageres:
@@ -101,7 +103,8 @@ class Cave(BaseModel):
         # check bouteille présente dans une étagères A FAIRE
         raise NotImplementedError()
 
-    def noter(self, bouteille: Bouteille) -> dict:
+
+    def commenter(self, bouteille: Bouteille) -> dict:
         if not isinstance(bouteille, Bouteille):
             return {
                 "message": "La bouteille n'est pas de type bouteille !",
@@ -111,12 +114,15 @@ class Cave(BaseModel):
         # check bouteille présente dans une étagères A FAIRE
         raise NotImplementedError()
 
-    def commenter(self, bouteille: Bouteille) -> dict:
-        if not isinstance(bouteille, Bouteille):
-            return {
-                "message": "La bouteille n'est pas de type bouteille !",
-                "status": 501
-            }
+    def update_cave(self) -> dict:
+        raise NotImplementedError
 
-        # check bouteille présente dans une étagères  FAIRE
-        raise NotImplementedError()
+    def get_cave(self) -> dict:
+        raise NotImplementedError
+
+    def delete_cave(self) -> dict:
+        raise NotImplementedError
+
+##################
+###
+##################

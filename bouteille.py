@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from connexiondb import Connexdb
 
 
 class Bouteille(BaseModel):
@@ -50,6 +51,9 @@ class Bouteille(BaseModel):
     moyen: float = Field(default=-1.0)
     photo: bytes = Field(default=b"")
     prix: float = Field(default=-1.0)
+    num_etagere: int = Field(default=-1)
+    config_db: dict = Field(default={})
+    collections: str = Field(default="bouteille")
 
     def consulter(self) -> dict:
         """
@@ -61,7 +65,6 @@ class Bouteille(BaseModel):
             A dictionary containing the bottle's details.
         """
         return {
-            "id": self.id,
             "nom": self.nom,
             "type": self.type,
             "annee": self.annee,
@@ -81,7 +84,7 @@ class Bouteille(BaseModel):
         dict
             A dictionary with an error message.
         """
-        raise NotImplementedError("La method supprimer n'est pas encore implémenté !")
+        raise NotImplementedError("La méthode supprimer n'est pas encore implémentée !")
 
     def archiver(self) -> dict:
         """
@@ -92,7 +95,7 @@ class Bouteille(BaseModel):
         dict
             A dictionary with an error message.
         """
-        raise NotImplementedError("La method archiver n'est pas encore implémenté !")
+        raise NotImplementedError("La méthode archiver n'est pas encore implémentée !")
 
     def moyenne(self) -> dict:
         """
@@ -103,7 +106,7 @@ class Bouteille(BaseModel):
         dict
             A dictionary with an error message.
         """
-        raise NotImplementedError("La method moyenne n'est pas encore implémenté !")
+        raise NotImplementedError("La méthode moyenne n'est pas encore implémentée !")
 
     def commenter(self, comment: str) -> dict:
         """
@@ -116,11 +119,11 @@ class Bouteille(BaseModel):
         """
         if not isinstance(comment, str):
             return {
-                "message": "Le commentaire n'est pas de chaine de caractère !",
+                "message": "Le commentaire n'est pas une chaîne de caractères !",
                 "status": 501
             }
 
-        raise NotImplementedError("La method moyenne n'est pas encore implémenté !")
+        raise NotImplementedError("La méthode commenter n'est pas encore implémentée !")
 
     def noter(self, note: float) -> dict:
         """
@@ -133,15 +136,154 @@ class Bouteille(BaseModel):
         """
         if not isinstance(note, float):
             return {
-                "message": "La note n'est pas de chaine de caractère !",
+                "message": "La note n'est pas un nombre à virgule !",
                 "status": 501
             }
 
-        raise NotImplementedError("La method moyenne n'est pas encore implémenté !")
+        raise NotImplementedError("La méthode noter n'est pas encore implémentée !")
+
+    def create(self) -> dict:
+        """
+        Creates the bottle in the database.
+
+        Returns
+        -------
+        dict
+            A dictionary containing a message and status code.
+        """
+        if not self.config_db:
+            return {
+                "message": "Donnez la configuration pour la base de données MongoDB",
+                "status": 500,
+            }
+
+        connex: Connexdb = Connexdb(**self.config_db)
+        data_bouteille: dict = self.consulter()
+
+        # Check if the bottle already exists
+        exist_status = connex.exist(self.collections, {"nom": self.nom})
+        if exist_status.get("status") == 200 and \
+                exist_status.get("message") == "Bouteille exists":
+            return {
+                "message": "La bouteille existe déjà dans la base de données",
+                "status": 500,
+            }
+
+        # Insert bottle into the database
+        rstatus: dict = connex.insert_data_into_collection(self.collections, data_bouteille)
+        if rstatus.get("status") != 200:
+            return {
+                "message": "La création de la nouvelle bouteille a échoué !",
+                "status": rstatus.get("status"),
+            }
+
+        return rstatus
+
+    def get(self, query: dict) -> dict:
+        """
+        Fetches a bottle from the database based on a query.
+
+        Parameters
+        ----------
+        query : dict
+            The query to fetch the bottle data.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the fetched data.
+        """
+        if not self.config_db:
+            return {
+                "message": "Donnez la configuration pour la base de données MongoDB",
+                "status": 500,
+            }
+
+        connex: Connexdb = Connexdb(**self.config_db)
+        result = connex.get_all_data_from_collection(self.collections)
+        for bouteille in result['data']:
+            if all(query.get(k) == bouteille.get(k) for k in query):
+                return {"status": 200, "message": "Bouteille trouvée", "data": bouteille}
+
+        return {"status": 404, "message": "Bouteille non trouvée"}
+
+    def update(self, query: dict, data: dict) -> dict:
+        """
+        Updates a bottle in the database.
+
+        Parameters
+        ----------
+        query : dict
+            The query to match the document to update.
+        data : dict
+            The new data to update.
+
+        Returns
+        -------
+        dict
+            The result of the update operation.
+        """
+        if not self.config_db:
+            return {
+                "message": "Donnez la configuration pour la base de données MongoDB",
+                "status": 500,
+            }
+
+        connex: Connexdb = Connexdb(**self.config_db)
+        rstatus: dict = connex.update_data_from_collection(self.collections, query, data)
+
+        if rstatus.get("status") != 200:
+            return {
+                "message": "La mise à jour de la bouteille a échoué !",
+                "status": rstatus.get("status"),
+            }
+
+        return rstatus
+
+    def delete(self, query: dict) -> dict:
+        """
+        Deletes a bottle from the database.
+
+        Parameters
+        ----------
+        query : dict
+            The query to match the document to delete.
+
+        Returns
+        -------
+        dict
+            The result of the deletion operation.
+        """
+        if not self.config_db:
+            return {
+                "message": "Donnez la configuration pour la base de données MongoDB",
+                "status": 500,
+            }
+
+        connex: Connexdb = Connexdb(**self.config_db)
+        rstatus: dict = connex.delete_data_from_collection(self.collections, query)
+
+        if rstatus.get("status") != 200:
+            return {
+                "message": "La suppression de la bouteille a échoué !",
+                "status": rstatus.get("status"),
+            }
+
+        return rstatus
 
 
 if __name__ == '__main__':
-    user = Bouteille(
+    # Example usage
+    # Configure the database connection
+    config_db = {
+        "host": 'localhost',
+        "port": 27018,
+        "username": "root",
+        "password": "wm7ze*2b"
+    }
+
+    # Create a Bouteille instance
+    bouteille = Bouteille(
         id=1,
         nom="Chateau Margaux",
         type="Rouge",
@@ -151,7 +293,22 @@ if __name__ == '__main__':
         note=95.0,
         moyen=94.5,
         photo=b'binarydatahere',
-        prix=150.0
+        prix=150.0,
+        config_db=config_db
     )
 
-    print(user.consulter())
+    # Create (insert) a new bottle in the database
+    create_result = bouteille.create()
+    print(f"Create result: {create_result}")
+
+    # Get the bottle data from the database
+    get_result = bouteille.get({"nom": "Chateau Margaux"})
+    print(f"Get result: {get_result}")
+
+    # Update the bottle data
+    update_result = bouteille.update({"nom": "Chateau Margaux"}, {"prix": 200.0})
+    print(f"Update result: {update_result}")
+
+    # Delete the bottle
+    delete_result = bouteille.delete({"nom": "Chateau Margaux"})
+    print(f"Delete result: {delete_result}")
