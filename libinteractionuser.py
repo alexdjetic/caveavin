@@ -1,167 +1,161 @@
 from connexiondb import Connexdb
 
-####################################
-##### Gestion des commentaires #####
-####################################
+#######################################
+##### Fonction nécessaire au CRUD #####
+#######################################
 
-def add_commentaire(config_db: dict, nom_bouteille: str, commentaire: str, id_user: int, date: str) -> dict:
+def effectuer_operation_db(config_db: dict, collection: str, operation: str, data: dict = None,
+                           query: dict = None) -> dict:
     """
-    Adds a comment to the MongoDB collection.
+    Effectue une opération de base de données (insertion, suppression, mise à jour ou récupération)
+    sur la collection spécifiée.
 
     Parameters
     ----------
     config_db : dict
-        A dictionary containing the configuration for connecting to the database.
-    nom_bouteille : str
-        The name of the bottle related to the comment.
-    commentaire : str
-        The comment text to be added.
-    id_user : int
-        The ID of the user making the comment.
-    date : str
-        The date when the comment was made.
+        Un dictionnaire contenant la configuration pour se connecter à la base de données.
+    collection : str
+        Le nom de la collection MongoDB (ex: "commentaire", "note").
+    operation : str
+        L'opération de base de données à effectuer ("insert", "delete", "update", "get").
+    data : dict, optional
+        Les données à insérer ou à mettre à jour (par défaut None).
+    query : dict, optional
+        La requête pour localiser les documents à récupérer, mettre à jour ou supprimer (par défaut None).
 
     Returns
     -------
     dict
-        A dictionary containing the status of the operation and a message.
+        Un dictionnaire contenant le statut de l'opération et un message.
     """
     connex: Connexdb = Connexdb(**config_db)
+    rstatus: dict = {}
+
+    match operation:
+        case "insert":
+            rstatus: dict = connex.insert_data_into_collection(collection, data)
+        case "delete":
+            rstatus: dict = connex.delete_data_from_collection(collection, query)
+        case "update":
+            rstatus: dict = connex.update_data_from_collection(collection, query, data)
+        case "get":
+            if query is None:
+                rstatus: dict = connex.get_all_data_from_collection(collection)
+            else:
+                rstatus: dict = connex.get_data_from_collection(collection, query)
+        case _:
+            return {
+                "message": f"Opération CRUD invalide '{operation}' (options valides : insert, delete, update, get)",
+                "status": 502,
+            }
+
+    return rstatus
+
+####################################
+##### Gestion des commentaires #####
+####################################
+
+def ajouter_commentaire(config_db: dict, nom_bouteille: str, commentaire: str, id_user: int, date: str) -> dict:
+    """
+    Ajoute un commentaire à la collection 'commentaire'.
+
+    Parameters
+    ----------
+    config_db : dict
+        La configuration de la base de données.
+    nom_bouteille : str
+        Le nom de la bouteille.
+    commentaire : str
+        Le contenu du commentaire.
+    id_user : int
+        L'ID de l'utilisateur ajoutant le commentaire.
+    date : str
+        La date du commentaire.
+
+    Returns
+    -------
+    dict
+        Un dictionnaire avec le résultat de l'opération.
+    """
     data: dict = {
         "auteur": id_user,
         "comment": commentaire,
         "nom_bouteille": nom_bouteille,
         "date": date
     }
-
-    # Add to the database
-    rstatus: dict = connex.insert_data_into_collection("commentaire", data)
-
-    # ajouter id commentaires sur la bouteille A FAIRE
-    
+    rstatus: dict = effectuer_operation_db(config_db, "commentaire", "insert", data)
     if rstatus.get("status") != 200:
         return rstatus
-
-    return {
-        "message": "Le commentaire a été ajouté avec succès !",
-        "status": 200
-    }
+    return {"message": "Le commentaire a été ajouté avec succès !", "status": 200}
 
 
-def del_commentaire(config_db: dict, query: dict) -> dict:
+def supprimer_commentaire(config_db: dict, query: dict) -> dict:
     """
-    Deletes a comment from the MongoDB collection based on the provided query.
+    Supprime un commentaire de la collection 'commentaire'.
 
     Parameters
     ----------
     config_db : dict
-        A dictionary containing the configuration for connecting to the database.
+        La configuration de la base de données.
     query : dict
-        A dictionary representing the query to locate the comment to be deleted.
+        La requête pour localiser le commentaire à supprimer.
 
     Returns
     -------
     dict
-        A dictionary containing the status of the operation and a message.
+        Un dictionnaire avec le résultat de l'opération.
     """
-    connex: Connexdb = Connexdb(**config_db)
-
-    # Use "_id" generated by MongoDB to disassociate comment
-    # Query example: {"_id": <_id given by the get of MongoDB>}
-
-    rstatus: dict = connex.delete_data_from_collection("commentaire", query)
-
-    # supprimer id commentaires sur la bouteille A FAIRE
-    
+    rstatus: dict = effectuer_operation_db(config_db, "commentaire", "delete", query=query)
     if rstatus.get("status") != 200:
         return rstatus
-
-    return {
-        "message": "Le commentaire a été supprimé avec succès !",
-        "status": 200
-    }
+    return {"message": "Le commentaire a été supprimé avec succès !", "status": 200}
 
 
-def update_commentaire(config_db: dict, query: dict, data: dict) -> dict:
+def mettre_a_jour_commentaire(config_db: dict, query: dict, data: dict) -> dict:
     """
-    Updates a comment in the MongoDB collection based on the provided query and new data.
+    Met à jour un commentaire dans la collection 'commentaire'.
 
     Parameters
     ----------
     config_db : dict
-        A dictionary containing the configuration for connecting to the database.
+        La configuration de la base de données.
     query : dict
-        A dictionary representing the query to locate the comment to be updated.
+        La requête pour localiser le commentaire à mettre à jour.
     data : dict
-        A dictionary containing the updated data for the comment.
+        Les nouvelles données pour le commentaire.
 
     Returns
     -------
     dict
-        A dictionary containing the status of the operation and a message.
+        Un dictionnaire avec le résultat de l'opération.
     """
-    connex: Connexdb = Connexdb(**config_db)
-
-    # Use "_id" generated by MongoDB to disassociate comment
-    # Query example: {"_id": <_id given by the get>}
-
-    rstatus: dict = connex.update_data_from_collection("commentaire", query, data)
-
+    rstatus: dict = effectuer_operation_db(config_db, "commentaire", "update", data=data, query=query)
     if rstatus.get("status") != 200:
         return rstatus
-
-    return {
-        "message": "Le commentaire a été mis à jour avec succès !",
-        "status": 200
-    }
+    return {"message": "Le commentaire a été mis à jour avec succès !", "status": 200}
 
 
-def get_commentaire(config_db: dict, query: dict = None) -> dict:
+def recuperer_commentaire(config_db: dict, query: dict = None) -> dict:
     """
-    Fetches comments from the MongoDB collection based on the provided query.
-
-    If no query is provided, all comments are retrieved from the 'commentaire' collection.
+    Récupère des commentaires de la collection 'commentaire'.
 
     Parameters
     ----------
     config_db : dict
-        A dictionary containing the configuration for connecting to the database.
+        La configuration de la base de données.
     query : dict, optional
-        A dictionary representing the query to filter comments (default is None).
+        La requête pour localiser les commentaires (par défaut None, ce qui récupère tous les commentaires).
 
     Returns
     -------
     dict
-        A dictionary containing the status of the operation, a message,
-        and the retrieved comments. The structure of the return dictionary is:
-        {
-            "status": int,
-            "message": str,
-            "commentaires": list
-        }
+        Un dictionnaire avec le résultat de l'opération.
     """
-    connex: Connexdb = Connexdb(**config_db)
-
-    if query is None:
-        rstatus: dict = connex.get_all_data_from_collection("commentaire")
-
-        if rstatus.get("status") != 200:
-            return rstatus
-
-        return {
-            "message": "La liste des commentaires a été récupérée avec succès !",
-            "status": 200,
-            "commentaires": rstatus.get("data")
-        }
-
-    # Retrieve comments with a more precise query
-    rstatus: dict = connex.get_data_from_collection("commentaire", query)
-
+    rstatus: dict = effectuer_operation_db(config_db, "commentaire", "get", query=query)
     if rstatus.get("status") != 200:
         return rstatus
-
     return {
-        "message": "La liste des commentaires (avec query) a été récupérée avec succès !",
+        "message": "La liste des commentaires a été récupérée avec succès !",
         "status": 200,
         "commentaires": rstatus.get("data")
     }
@@ -170,161 +164,136 @@ def get_commentaire(config_db: dict, query: dict = None) -> dict:
 #####     Gestion des notes    #####
 ####################################
 
-def add_notes(config_db: dict, nom_bouteille: str, note: float, id_user: int) -> dict:
+def ajouter_notes(config_db: dict, nom_bouteille: str, note: float, id_user: int) -> dict:
     """
-    Adds a note to the MongoDB collection.
+    Ajoute une note à la collection 'note'.
 
     Parameters
     ----------
     config_db : dict
-        A dictionary containing the configuration for connecting to the database.
+        La configuration de la base de données.
     nom_bouteille : str
-        The name of the bottle related to the note.
+        Le nom de la bouteille.
     note : float
-        The note value to be added.
+        La valeur de la note.
     id_user : int
-        The ID of the user making the note.
+        L'ID de l'utilisateur ajoutant la note.
 
     Returns
     -------
     dict
-        A dictionary containing the status of the operation and a message.
+        Un dictionnaire avec le résultat de l'opération.
     """
-    connex: Connexdb = Connexdb(**config_db)
     data: dict = {
         "auteur": id_user,
         "note": note,
-        "nom_bouteille": nom_bouteille,
+        "nom_bouteille": nom_bouteille
     }
-
-    # Add to the database
-    rstatus: dict = connex.insert_data_into_collection("note", data)
-
-    # ajouter id notes sur la bouteille A FAIRE
-
+    rstatus: dict = effectuer_operation_db(config_db, "note", "insert", data)
     if rstatus.get("status") != 200:
         return rstatus
-
-    return {
-        "message": "La note a été ajoutée avec succès !",
-        "status": 200
-    }
+    return {"message": "La note a été ajoutée avec succès !", "status": 200}
 
 
-def del_notes(config_db: dict, query: dict) -> dict:
+def supprimer_notes(config_db: dict, query: dict) -> dict:
     """
-    Deletes a note from the MongoDB collection based on the provided query.
+    Supprime une note de la collection 'note'.
 
     Parameters
     ----------
     config_db : dict
-        A dictionary containing the configuration for connecting to the database.
+        La configuration de la base de données.
     query : dict
-        A dictionary representing the query to locate the note to be deleted.
+        La requête pour localiser la note à supprimer.
 
     Returns
     -------
     dict
-        A dictionary containing the status of the operation and a message.
+        Un dictionnaire avec le résultat de l'opération.
     """
-    connex: Connexdb = Connexdb(**config_db)
-
-    # Use "_id" generated by MongoDB to disassociate note
-    # Query example: {"_id": <_id given by the get>}
-
-    rstatus: dict = connex.delete_data_from_collection("note", query)
-
-    # supprimer id notes sur la bouteille A FAIRE
-    
+    rstatus: dict = effectuer_operation_db(config_db, "note", "delete", query=query)
     if rstatus.get("status") != 200:
         return rstatus
-
-    return {
-        "message": "La note a été supprimée avec succès !",
-        "status": 200
-    }
+    return {"message": "La note a été supprimée avec succès !", "status": 200}
 
 
-def update_notes(config_db: dict, query: dict, data: dict) -> dict:
+def mettre_a_jour_notes(config_db: dict, query: dict, data: dict) -> dict:
     """
-    Updates a note in the MongoDB collection based on the provided query and new data.
+    Met à jour une note dans la collection 'note'.
 
     Parameters
     ----------
     config_db : dict
-        A dictionary containing the configuration for connecting to the database.
+        La configuration de la base de données.
     query : dict
-        A dictionary representing the query to locate the note to be updated.
+        La requête pour localiser la note à mettre à jour.
     data : dict
-        A dictionary containing the updated data for the note.
+        Les nouvelles données pour la note.
 
     Returns
     -------
     dict
-        A dictionary containing the status of the operation and a message.
+        Un dictionnaire avec le résultat de l'opération.
     """
-    connex: Connexdb = Connexdb(**config_db)
-
-    # Use "_id" generated by MongoDB to disassociate note
-    # Query example: {"_id": <_id given by the get>}
-
-    rstatus: dict = connex.update_data_from_collection("note", query, data)
-    
+    rstatus: dict = effectuer_operation_db(config_db, "note", "update", data=data, query=query)
     if rstatus.get("status") != 200:
         return rstatus
-
-    return {
-        "message": "La note a été mise à jour avec succès !",
-        "status": 200
-    }
+    return {"message": "La note a été mise à jour avec succès !", "status": 200}
 
 
-def get_notes(config_db: dict, query: dict = None) -> dict:
+def recuperer_notes(config_db: dict, query: dict = None) -> dict:
     """
-    Fetches notes from the MongoDB collection based on the provided query.
-
-    If no query is provided, all notes are retrieved from the 'note' collection.
+    Récupère des notes de la collection 'note'.
 
     Parameters
     ----------
     config_db : dict
-        A dictionary containing the configuration for connecting to the database.
+        La configuration de la base de données.
     query : dict, optional
-        A dictionary representing the query to filter notes (default is None).
+        La requête pour localiser les notes (par défaut None, ce qui récupère toutes les notes).
 
     Returns
     -------
     dict
-        A dictionary containing the status of the operation, a message,
-        and the retrieved notes. The structure of the return dictionary is:
-        {
-            "status": int,
-            "message": str,
-            "notes": list
-        }
+        Un dictionnaire avec le résultat de l'opération.
     """
-    connex: Connexdb = Connexdb(**config_db)
-
-    if query is None:
-        rstatus: dict = connex.get_all_data_from_collection("note")
-
-        if rstatus.get("status") != 200:
-            return rstatus
-
-        return {
-            "message": "La liste des notes a été récupérée avec succès !",
-            "status": 200,
-            "notes": rstatus.get("data")
-        }
-
-    # Retrieve notes with a more precise query
-    rstatus: dict = connex.get_data_from_collection("note", query)
+    rstatus: dict = effectuer_operation_db(config_db, "note", "get", query=query)
 
     if rstatus.get("status") != 200:
         return rstatus
-
     return {
-        "message": "La liste des notes (avec query) a été récupérée avec succès !",
+        "message": "La liste des notes a été récupérée avec succès !",
         "status": 200,
         "notes": rstatus.get("data")
+    }
+
+#######################################
+#####     Gestion des archives    #####
+#######################################
+
+def recuperer_archives(config_db: dict, collection: str, query: dict = None) -> dict:
+    """
+    Récupère des données de la collection spécifiée.
+
+    Parameters
+    ----------
+    config_db : dict
+        La configuration de la base de données.
+    collection : str
+        Le nom de la collection MongoDB.
+    query : dict, optional
+        La requête pour localiser les documents (par défaut None, ce qui récupère tous les documents).
+
+    Returns
+    -------
+    dict
+        Un dictionnaire avec le résultat de l'opération.
+    """
+    rstatus: dict = effectuer_operation_db(config_db, collection, "get", query=query)
+    if rstatus.get("status") != 200:
+        return rstatus
+    return {
+        "message": f"La liste des données de la collection '{collection}' a été récupérée avec succès !",
+        "status": 200,
+        "archives": rstatus.get("data")
     }

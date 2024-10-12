@@ -18,9 +18,9 @@ class Bouteille(BaseModel):
         The year of production.
     region : str
         The region where the wine was produced.
-    commentaire : list of str
+    commentaires : list of str
         Comments about the wine.
-    note : float
+    notes : float
         The rating of the wine.
     moyen : float
         The average rating of the wine.
@@ -28,6 +28,14 @@ class Bouteille(BaseModel):
         The photo of the bottle in binary format.
     prix : float
         The price of the bottle.
+    num_etagere : int
+        The shelf number where the bottle is stored.
+    config_db : dict
+        The database configuration.
+    collections : str
+        The name of the collection in the database.
+    numbers : int
+        The number of bottles.
 
     Methods
     -------
@@ -36,9 +44,9 @@ class Bouteille(BaseModel):
     supprimer() -> dict
         Raises NotImplementedError.
     archiver() -> dict
-        Raises NotImplementedError.
+        Archives the bottle in the database.
     moyenne() -> dict
-        Raises NotImplementedError.
+        Calculates the average rating of the wine.
     """
 
     id: int = Field(default=-1)
@@ -46,14 +54,15 @@ class Bouteille(BaseModel):
     type: str = Field(default="inconnue")
     annee: int = Field(default=-1)
     region: str = Field(default="Russie")
-    commentaire: list[str] = Field(default=[])
-    note: float = Field(default=-1.0)
+    commentaires: list[str] = Field(default=[])
+    notes: float = Field(default=-1.0)
     moyen: float = Field(default=-1.0)
     photo: bytes = Field(default=b"")
     prix: float = Field(default=-1.0)
     num_etagere: int = Field(default=-1)
     config_db: dict = Field(default={})
     collections: str = Field(default="bouteille")
+    numbers: int = Field(default=1)
 
     def consulter(self) -> dict:
         """
@@ -62,94 +71,243 @@ class Bouteille(BaseModel):
         Returns
         -------
         dict
-            A dictionary containing the bottle's details.
+            A dictionary containing the bottle's attributes.
         """
         return {
             "nom": self.nom,
             "type": self.type,
             "annee": self.annee,
             "region": self.region,
-            "commentaire": self.commentaire,
+            "commentaires": self.commentaires,
+            "notes": self.notes,
             "moyen": self.moyen,
             "photo": self.photo,
             "prix": self.prix,
+            "num_etagere": self.num_etagere
         }
-
-    def supprimer(self) -> dict:
-        """
-        Raises NotImplementedError.
-
-        Returns
-        -------
-        dict
-            A dictionary with an error message.
-        """
-        raise NotImplementedError("La méthode supprimer n'est pas encore implémentée !")
 
     def archiver(self) -> dict:
         """
-        Raises NotImplementedError.
+        Archives the bottle in the database.
 
         Returns
         -------
         dict
-            A dictionary with an error message.
+            A dictionary indicating the result of the archiving operation.
         """
-        raise NotImplementedError("La méthode archiver n'est pas encore implémentée !")
+        if not self.config_db:
+            return {
+                "message": "Donnez la configuration pour la base de données MongoDB",
+                "status": 500,
+            }
+
+        # Get all information about the bottle
+        all_info_result = self.get_all_information()
+
+        if all_info_result.get("status") != 200:
+            return all_info_result  # Return the error response if fetching information failed
+
+        # Prepare the data to archive
+        archive_data = all_info_result['data']
+
+        # Create a new connection to the database
+        connex: Connexdb = Connexdb(**self.config_db)
+
+        # Insert the data into the archive collection
+        archive_status = connex.insert_data_into_collection("archive", archive_data)
+
+        if archive_status.get("status") != 200:
+            return {
+                "message": "L'archivage de la bouteille a échoué !",
+                "status": archive_status.get("status"),
+            }
+
+        # If archiving was successful, delete the bottle from the collection
+        delete_status = self.delete()  # Assuming this method exists and is correctly implemented
+
+        if delete_status.get("status") != 200:
+            return {
+                "message": "L'archivage a réussi, mais la suppression a échoué !",
+                "status": delete_status.get("status"),
+            }
+
+        return {
+            "message": "Bouteille archivée et supprimée avec succès.",
+            "status": 200,
+        }
+
+    def get_commentaires(self) -> dict:
+        """
+        Fetches comments about the wine from the database.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the fetched comments.
+        """
+        if not self.config_db:
+            return {
+                "message": "Donnez la configuration pour la base de données MongoDB",
+                "status": 500,
+            }
+
+        connex: Connexdb = Connexdb(**self.config_db)
+
+        # Query to get comments by name
+        query = {"nom": self.nom}
+        commentaires_result = connex.get_data_from_collection("commentaire", query)
+
+        if commentaires_result.get("status") != 200:
+            return {
+                "message": "Échec de la récupération des commentaires.",
+                "status": commentaires_result.get("status"),
+            }
+
+        return {
+            "status": 200,
+            "data": commentaires_result.get("data", [])
+        }
+
+    def get_notes(self) -> dict:
+        """
+        Fetches ratings for the wine from the database.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the fetched ratings.
+        """
+        if not self.config_db:
+            return {
+                "message": "Donnez la configuration pour la base de données MongoDB",
+                "status": 500,
+            }
+
+        connex: Connexdb = Connexdb(**self.config_db)
+
+        # Query to get ratings by name
+        query = {"nom": self.nom}
+        commentaires_result = connex.get_data_from_collection("note", query)
+
+        if commentaires_result.get("status") != 200:
+            return {
+                "message": "Échec de la récupération des notes.",
+                "status": commentaires_result.get("status"),
+            }
+
+        return {
+            "status": 200,
+            "data": commentaires_result.get("data", [])
+        }
+
+    def get_all_information(self) -> dict:
+        """
+        Retrieves all information about the bottle from the database.
+
+        Returns
+        -------
+        dict
+            A dictionary containing all the information related to the bottle.
+        """
+        if not self.config_db:
+            return {
+                "message": "Donnez la configuration pour la base de données MongoDB",
+                "status": 500,
+            }
+
+        # Retrieve the bottle information
+        connex: Connexdb = Connexdb(**self.config_db)
+        query = {"nom": self.nom}
+        bouteille_result = connex.get_data_from_collection(self.collections, query)
+
+        if bouteille_result.get("status") != 200 or not bouteille_result['data']:
+            return {
+                "message": "Bouteille non trouvée.",
+                "status": 404,
+            }
+
+        # Assuming the bottle is the first item in the result
+        bouteille = bouteille_result['data'][0]
+
+        # Get comments and ratings
+        commentaires = self.get_commentaires().get("data", [])
+        notes = self.get_notes().get("data", [])
+
+        # Combine all information into a single dictionary
+        all_information: dict = {
+            "nom": bouteille.get("nom"),
+            "type": bouteille.get("type"),
+            "annee": bouteille.get("annee"),
+            "region": bouteille.get("region"),
+            "prix": bouteille.get("prix"),
+            "photo": bouteille.get("photo"),
+            "commentaires": commentaires,
+            "notes": notes,
+            "moyen": self.moyenne(),
+            "num_etagere": bouteille.get("num_etagere"),
+            "cave": bouteille.get("cave"),
+        }
+
+        return {
+            "message": "Toutes les informations ont été récupérées avec succès !",
+            "status": 200,
+            "data": all_information
+        }
 
     def moyenne(self) -> dict:
         """
-        Raises NotImplementedError.
+        Calculates the average rating of the wine.
 
         Returns
         -------
         dict
-            A dictionary with an error message.
+            A dictionary containing the average rating and the operation status.
         """
-        raise NotImplementedError("La méthode moyenne n'est pas encore implémentée !")
-
-    def commenter(self, comment: str) -> dict:
-        """
-        Raises NotImplementedError.
-
-        Returns
-        -------
-        dict
-            A dictionary with an error message.
-        """
-        if not isinstance(comment, str):
+        if not self.config_db:
             return {
-                "message": "Le commentaire n'est pas une chaîne de caractères !",
-                "status": 501
+                "message": "Donnez la configuration pour la base de données MongoDB",
+                "status": 500,
             }
 
-        raise NotImplementedError("La méthode commenter n'est pas encore implémentée !")
+        connex: Connexdb = Connexdb(**self.config_db)
 
-    def noter(self, note: float) -> dict:
-        """
-        Raises NotImplementedError.
+        # Query to filter ratings by name
+        query = {"nom": self.nom}
+        notes_result = connex.get_data_from_collection("note", query)
 
-        Returns
-        -------
-        dict
-            A dictionary with an error message.
-        """
-        if not isinstance(note, float):
+        if notes_result.get("status") != 200:
             return {
-                "message": "La note n'est pas un nombre à virgule !",
-                "status": 501
+                "message": "Échec de la récupération des notes.",
+                "status": notes_result.get("status"),
             }
 
-        raise NotImplementedError("La méthode noter n'est pas encore implémentée !")
+        # Extract the values from the retrieved ratings
+        notes = [note['value'] for note in notes_result['data']]
+
+        if not notes:
+            return {
+                "message": "Aucune note trouvée pour cette bouteille.",
+                "status": 404,
+            }
+
+        # Calculate the average
+        average_value = sum(notes) / len(notes)
+
+        return {
+            "message": "Moyenne calculée avec succès.",
+            "average": average_value,
+            "status": 200,
+        }
 
     def create(self) -> dict:
         """
-        Creates the bottle in the database.
+        Creates a new bottle in the database or increments the numbers field
+        if a bottle with the same name already exists.
 
         Returns
         -------
         dict
-            A dictionary containing a message and status code.
+            A dictionary containing the operation result.
         """
         if not self.config_db:
             return {
@@ -158,40 +316,129 @@ class Bouteille(BaseModel):
             }
 
         connex: Connexdb = Connexdb(**self.config_db)
-        data_bouteille: dict = self.consulter()
 
         # Check if the bottle already exists
-        exist_status = connex.exist(self.collections, {"nom": self.nom})
-        if exist_status.get("status") == 200 and \
-                exist_status.get("message") == "Bouteille exists":
-            return {
-                "message": "La bouteille existe déjà dans la base de données",
-                "status": 500,
-            }
+        existing_bottle_result = self.exist(connex)
 
-        # Insert bottle into the database
-        rstatus: dict = connex.insert_data_into_collection(self.collections, data_bouteille)
-        if rstatus.get("status") != 200:
-            return {
-                "message": "La création de la nouvelle bouteille a échoué !",
-                "status": rstatus.get("status"),
-            }
+        if existing_bottle_result.get("status") != 200:
+            return existing_bottle_result  # Return error from exist method
 
-        return rstatus
+        if existing_bottle_result['data']:
+            # Bottle exists, increment the number of bottles
+            return self.increment_bouteille(connex, existing_bottle_result['data'][0])
 
-    def get(self, query: dict) -> dict:
+        # Bottle does not exist, create a new entry
+        return self.create_bouteille(connex)
+
+    def create_bouteille(self, connex: Connexdb) -> dict:
         """
-        Fetches a bottle from the database based on a query.
+        Creates a new bottle in the database.
 
         Parameters
         ----------
-        query : dict
-            The query to fetch the bottle data.
+        connex : Connexdb
+            The database connection instance.
 
         Returns
         -------
         dict
-            A dictionary containing the fetched data.
+            A dictionary containing the operation result.
+        """
+        bottle_data = {
+            "nom": self.nom,
+            "type": self.type,
+            "annee": self.annee,
+            "region": self.region,
+            "commentaires": self.commentaires,
+            "notes": self.notes,
+            "moyen": self.moyen,
+            "photo": self.photo,
+            "prix": self.prix,
+            "num_etagere": self.num_etagere,
+            "numbers": self.numbers
+        }
+
+        create_result: dict = connex.insert_data_into_collection(self.collections, bottle_data)
+
+        if create_result.get("status") != 200:
+            return {
+                "message": "Échec de la création de la bouteille.",
+                "status": create_result.get("status"),
+            }
+
+        return {
+            "message": "Bouteille créée avec succès.",
+            "status": 201,
+        }
+
+    def exist(self, connex: Connexdb) -> dict:
+        """
+        Checks if the bottle exists in the database.
+
+        Parameters
+        ----------
+        connex : Connexdb
+            The database connection instance.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the existence check result.
+        """
+        query = {"nom": self.nom}
+        existing_bottle_result = connex.get_data_from_collection(self.collections, query)
+
+        if existing_bottle_result.get("status") != 200:
+            return {
+                "message": "Échec de la vérification de l'existence de la bouteille.",
+                "status": existing_bottle_result.get("status"),
+            }
+
+        return existing_bottle_result
+
+    def increment_bouteille(self, connex: Connexdb, existing_bottle: dict) -> dict:
+        """
+        Increments the numbers field of an existing bottle.
+
+        Parameters
+        ----------
+        connex : Connexdb
+            The database connection instance.
+        existing_bottle : dict
+            The existing bottle data.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the operation result.
+        """
+        self.numbers = existing_bottle.get("numbers", 0) + 1
+
+        # Update the number of bottles
+        update_query = {"_id": existing_bottle["_id"]}
+        update_data = {"$set": {"numbers": self.numbers}}
+
+        update_result = connex.update_data_from_collection(self.collections, update_query, update_data)
+
+        if update_result.get("status") != 200:
+            return {
+                "message": "Échec de la mise à jour du nombre de bouteilles.",
+                "status": update_result.get("status"),
+            }
+
+        return {
+            "message": "Bouteille existante mise à jour avec succès.",
+            "status": 200,
+        }
+
+    def delete(self) -> dict:
+        """
+        Deletes the bottle from the database.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the operation result.
         """
         if not self.config_db:
             return {
@@ -200,115 +447,60 @@ class Bouteille(BaseModel):
             }
 
         connex: Connexdb = Connexdb(**self.config_db)
-        result = connex.get_all_data_from_collection(self.collections)
-        for bouteille in result['data']:
-            if all(query.get(k) == bouteille.get(k) for k in query):
-                return {"status": 200, "message": "Bouteille trouvée", "data": bouteille}
 
-        return {"status": 404, "message": "Bouteille non trouvée"}
+        # Query to delete the bottle by name
+        query = {"nom": self.nom}
+        delete_result = connex.delete_data_from_collection(self.collections, query)
 
-    def update(self, query: dict, data: dict) -> dict:
-        """
-        Updates a bottle in the database.
-
-        Parameters
-        ----------
-        query : dict
-            The query to match the document to update.
-        data : dict
-            The new data to update.
-
-        Returns
-        -------
-        dict
-            The result of the update operation.
-        """
-        if not self.config_db:
+        if delete_result.get("status") != 200:
             return {
-                "message": "Donnez la configuration pour la base de données MongoDB",
-                "status": 500,
+                "message": "Échec de la suppression de la bouteille.",
+                "status": delete_result.get("status"),
             }
 
-        connex: Connexdb = Connexdb(**self.config_db)
-        rstatus: dict = connex.update_data_from_collection(self.collections, query, data)
-
-        if rstatus.get("status") != 200:
-            return {
-                "message": "La mise à jour de la bouteille a échoué !",
-                "status": rstatus.get("status"),
-            }
-
-        return rstatus
-
-    def delete(self, query: dict) -> dict:
-        """
-        Deletes a bottle from the database.
-
-        Parameters
-        ----------
-        query : dict
-            The query to match the document to delete.
-
-        Returns
-        -------
-        dict
-            The result of the deletion operation.
-        """
-        if not self.config_db:
-            return {
-                "message": "Donnez la configuration pour la base de données MongoDB",
-                "status": 500,
-            }
-
-        connex: Connexdb = Connexdb(**self.config_db)
-        rstatus: dict = connex.delete_data_from_collection(self.collections, query)
-
-        if rstatus.get("status") != 200:
-            return {
-                "message": "La suppression de la bouteille a échoué !",
-                "status": rstatus.get("status"),
-            }
-
-        return rstatus
+        return {
+            "message": "Bouteille supprimée avec succès.",
+            "status": 200,
+        }
 
 
-if __name__ == '__main__':
-    # Example usage
-    # Configure the database connection
-    config_db = {
-        "host": 'localhost',
+
+if __name__ == "__main__":
+    """
+    Point d'entrée principal du programme.
+
+    Cette section du code permet d'initialiser un objet Bouteille et de 
+    démontrer certaines de ses fonctionnalités, comme la création et 
+    l'archivage d'une bouteille.
+    """
+
+    # Configuration de la base de données (exemple)
+    db_config = {
+        "host": "localhost",
         "port": 27018,
         "username": "root",
         "password": "wm7ze*2b"
     }
 
-    # Create a Bouteille instance
+    # Créer une instance de Bouteille
     bouteille = Bouteille(
-        id=1,
-        nom="Chateau Margaux",
+        nom="Château Margaux",
         type="Rouge",
         annee=2015,
-        region="France",
-        commentaire=["Excellent wine", "Rich in flavor"],
-        note=95.0,
-        moyen=94.5,
-        photo=b'binarydatahere',
+        region="Bordeaux",
         prix=150.0,
-        config_db=config_db
+        num_etagere=3,
+        config_db=db_config
     )
 
-    # Create (insert) a new bottle in the database
+    # Créer une nouvelle bouteille dans la base de données
     create_result = bouteille.create()
-    print(f"Create result: {create_result}")
+    print(create_result)
 
-    # Get the bottle data from the database
-    get_result = bouteille.get({"nom": "Chateau Margaux"})
-    print(f"Get result: {get_result}")
+    # Archiver la bouteille
+    archive_result = bouteille.archiver()
+    print(archive_result)
 
-    # Update the bottle data
-    update_result = bouteille.update({"nom": "Chateau Margaux"}, {"prix": 200.0})
-    print(f"Update result: {update_result}")
-
-    # Delete the bottle
-    delete_result = bouteille.delete({"nom": "Chateau Margaux"})
-    print(f"Delete result: {delete_result}")
+    # Consulter les détails de la bouteille
+    details = bouteille.consulter()
+    print(details)

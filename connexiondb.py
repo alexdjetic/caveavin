@@ -209,7 +209,7 @@ class Connexdb:
         """
         try:
             exists = self.db[collection].find_one(query) is not None
-            return {"status": 200, "message": "User exists" if exists else "User does not exist"}
+            return {"status": 200, "message": "Data exists" if exists else "User does not exist"}
         except PyMongoError as e:
             return {"status": 500, "message": f"Error checking existence in collection '{collection}': {e}"}
         except TypeError as e:
