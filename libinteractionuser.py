@@ -37,6 +37,8 @@ def add_commentaire(config_db: dict, nom_bouteille: str, commentaire: str, id_us
     # Add to the database
     rstatus: dict = connex.insert_data_into_collection("commentaire", data)
 
+    # ajouter id commentaires sur la bouteille A FAIRE
+    
     if rstatus.get("status") != 200:
         return rstatus
 
@@ -69,6 +71,8 @@ def del_commentaire(config_db: dict, query: dict) -> dict:
 
     rstatus: dict = connex.delete_data_from_collection("commentaire", query)
 
+    # supprimer id commentaires sur la bouteille A FAIRE
+    
     if rstatus.get("status") != 200:
         return rstatus
 
@@ -196,6 +200,8 @@ def add_notes(config_db: dict, nom_bouteille: str, note: float, id_user: int) ->
     # Add to the database
     rstatus: dict = connex.insert_data_into_collection("note", data)
 
+    # ajouter id notes sur la bouteille A FAIRE
+
     if rstatus.get("status") != 200:
         return rstatus
 
@@ -228,6 +234,8 @@ def del_notes(config_db: dict, query: dict) -> dict:
 
     rstatus: dict = connex.delete_data_from_collection("note", query)
 
+    # supprimer id notes sur la bouteille A FAIRE
+    
     if rstatus.get("status") != 200:
         return rstatus
 
@@ -261,7 +269,7 @@ def update_notes(config_db: dict, query: dict, data: dict) -> dict:
     # Query example: {"_id": <_id given by the get>}
 
     rstatus: dict = connex.update_data_from_collection("note", query, data)
-
+    
     if rstatus.get("status") != 200:
         return rstatus
 
