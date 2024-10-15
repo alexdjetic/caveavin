@@ -25,12 +25,14 @@ app.include_router(user_router, prefix="/user")
 app.include_router(cave_router, prefix="/cave")
 app.include_router(bouteille_router, prefix="/bottle")
 
+
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request, user_cookies: dict = Depends(get_user_cookies)):
     return templates.TemplateResponse("index.html", {
         "request": request,
         **user_cookies
     })
+
 
 # Main entry point to run the FastAPI app
 if __name__ == "__main__":

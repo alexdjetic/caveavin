@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from connexiondb import Connexdb
+from Classes.connexiondb import Connexdb
 from typing import Optional, List, Dict, Any
 from bson import ObjectId
 
@@ -358,12 +358,13 @@ if __name__ == '__main__':
     }
 
     user = Personne(
-        login="alexggh",
-        password="g6s4Lpdq",
+        login="test",
+        password="test",
         config_db=config_db,
         collections="user"
     )
 
+    user.create()
     print("Before update:")
     print(user.get())
 

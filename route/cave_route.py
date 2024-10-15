@@ -23,7 +23,7 @@ templates = Jinja2Templates(directory="templates")
 @router.get("/", response_class=HTMLResponse)
 async def cave(request: Request, user_cookies: dict = Depends(get_user_cookies)):
     if user_cookies["login"] is None:
-        return RedirectResponse(url="/login", status_code=302)
+        return RedirectResponse(url="/user/login", status_code=302)
     user = Personne(
         login=user_cookies["login"],
         password="",
@@ -64,7 +64,7 @@ async def get_etageres(cave_id: str, user_cookies: dict = Depends(get_user_cooki
 @router.get("/add", response_class=HTMLResponse)
 async def add_cave_form(request: Request, user_cookies: dict = Depends(get_user_cookies)):
     if user_cookies["login"] is None:
-        return RedirectResponse(url="/login", status_code=302)
+        return RedirectResponse(url="/user/login", status_code=302)
     return templates.TemplateResponse("add_cave.html", {
         "request": request,
         **user_cookies
@@ -78,7 +78,7 @@ async def add_cave(
     nb_emplacement: int = Form(...)
 ):
     if user_cookies["login"] is None:
-        return RedirectResponse(url="/login", status_code=302)
+        return RedirectResponse(url="/user/login", status_code=302)
     cave = Cave(config_db=config_db, nom=cave_name, nb_emplacement=nb_emplacement)
     result = cave.create_cave(user_cookies["login"])
     if result["status"] == 200:
@@ -93,7 +93,7 @@ async def add_cave(
 @router.get("/delete/{cave_name}")
 async def delete_cave(cave_name: str, user_cookies: dict = Depends(get_user_cookies)):
     if user_cookies["login"] is None:
-        return RedirectResponse(url="/login", status_code=302)
+        return RedirectResponse(url="/user/login", status_code=302)
     cave = Cave(config_db=config_db, nom=cave_name)
     result = cave.delete_cave(user_cookies["login"])
     return RedirectResponse(url="/cave", status_code=302)
