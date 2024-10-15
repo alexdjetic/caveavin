@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
-from bouteille import Bouteille
-from connexiondb import Connexdb
+from .bouteille import Bouteille
+from .connexiondb import Connexdb
 
 
 class Etagere(BaseModel):

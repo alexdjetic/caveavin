@@ -1,4 +1,27 @@
-from connexiondb import Connexdb
+from fastapi import Cookie
+from Classes.connexiondb import Connexdb
+
+########################################
+#####     Configuration de la DB   #####
+########################################
+
+config_db: dict = {
+    "host": 'localhost',
+    "port": 27018,
+    "username": "root",
+    "password": "wm7ze*2b"
+}
+
+def get_user_cookies(login: str = Cookie(None), perm: str = Cookie(None),
+                     nom: str = Cookie(None), prenom: str = Cookie(None), email: str = Cookie(None)) -> dict:
+    return {
+        "login": login,
+        "email": email,
+        "perm": perm,
+        "nom": nom,
+        "prenom": prenom
+    }
+
 
 #######################################
 ##### Fonction nécessaire au CRUD #####

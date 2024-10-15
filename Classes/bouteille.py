@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from connexiondb import Connexdb
+from Classes.connexiondb import Connexdb
 
 
 class Bouteille(BaseModel):

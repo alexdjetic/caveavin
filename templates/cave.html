@@ -6,7 +6,7 @@
 <div class="container mx-auto px-4 py-8">
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold">Vos Caves</h1>
-        <a href="/add_cave" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+        <a href="/cave/add" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
             + Ajouter une Cave
         </a>
     </div>
@@ -31,7 +31,7 @@
                 {% endif %}
                 <div class="mt-4 flex justify-between">
                     <a href="/cave/{{ cave_name }}" class="text-blue-500 hover:underline">Voir Détails</a>
-                    <a href="/delete_cave/{{ cave_name }}" class="text-red-500 hover:underline" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette cave ?');">
+                    <a href="/cave/delete/{{ cave_name }}" class="text-red-500 hover:underline" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette cave ?');">
                         Supprimer
                     </a>
                 </div>

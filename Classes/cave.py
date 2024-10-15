@@ -1,7 +1,7 @@
-from etageres import Etagere
-from bouteille import Bouteille
+from .etageres import Etagere
+from Classes.bouteille import Bouteille
 from pydantic import BaseModel, Field
-from connexiondb import Connexdb
+from Classes.connexiondb import Connexdb
 
 
 class Cave(BaseModel):
@@ -211,4 +211,5 @@ if __name__ == "__main__":
     print(cave.consulter())  # Consultation des informations de la cave
     print(cave.enlever_etagere(1))  # Enlève l'étagère
     print(cave.delete_cave(login_user))  # Supprime la cave
+
 
