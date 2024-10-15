@@ -1,6 +1,7 @@
 fastapi
 pydantic
-fastapi
 unicorn
 pymongo
 email_validator
+jinja2
+python-multipart
