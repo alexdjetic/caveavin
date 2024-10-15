@@ -141,31 +141,17 @@ class Connexdb:
         except TypeError as e:
             return {"status": 501, "message": f"Type Error: {e}"}
 
-    def update_data_from_collection(self, collection: str, query: dict, new_data: dict) -> dict:
-        """
-        Updates data in a specified collection based on a query.
-
-        Parameters
-        ----------
-        collection : str
-            The name of the collection to update data in.
-        query : dict
-            The query to match the document to update.
-        new_data : dict
-            The new data to set in the matched document.
-
-        Returns
-        -------
-        dict
-            A dictionary with status and message.
-        """
+    def update_data_from_collection(self, collection_name: str, query: dict, data: dict) -> dict:
         try:
-            self.db[collection].update_one(query, {'$set': new_data})
-            return {"status": 200, "message": "Successfully updated data"}
-        except PyMongoError as e:
-            return {"status": 500, "message": f"Error updating data in collection '{collection}': {e}"}
-        except TypeError as e:
-            return {"status": 501, "message": f"Type Error: {e}"}
+            collection = self.db[collection_name]
+            result = collection.update_one(query, data)
+            
+            if result.modified_count == 0:
+                return {"status": 404, "message": "No document found to update"}
+            
+            return {"status": 200, "message": "Document updated successfully"}
+        except Exception as e:
+            return {"status": 500, "message": f"Error updating document: {str(e)}"}
 
     def insert_data_into_collection(self, collection: str, data: dict) -> dict:
         """
@@ -265,3 +251,4 @@ if __name__ == '__main__':
     # Closing the connection
     close_result = db_connection.close()
     print(close_result)
+

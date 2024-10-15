@@ -84,8 +84,12 @@ def ajouter_commentaire(config_db: dict, nom_bouteille: str, commentaire: str, i
         "date": date
     }
     rstatus: dict = effectuer_operation_db(config_db, "commentaire", "insert", data)
+
+    # test si une erreur arrive dans la requète
     if rstatus.get("status") != 200:
         return rstatus
+
+    # message de succès d'ajout de commentaire
     return {"message": "Le commentaire a été ajouté avec succès !", "status": 200}
 
 
@@ -106,8 +110,12 @@ def supprimer_commentaire(config_db: dict, query: dict) -> dict:
         Un dictionnaire avec le résultat de l'opération.
     """
     rstatus: dict = effectuer_operation_db(config_db, "commentaire", "delete", query=query)
+
+    # test si une erreur arrive dans la requète
     if rstatus.get("status") != 200:
         return rstatus
+
+    # message de succès de suppresion de commentaire
     return {"message": "Le commentaire a été supprimé avec succès !", "status": 200}
 
 
@@ -130,8 +138,12 @@ def mettre_a_jour_commentaire(config_db: dict, query: dict, data: dict) -> dict:
         Un dictionnaire avec le résultat de l'opération.
     """
     rstatus: dict = effectuer_operation_db(config_db, "commentaire", "update", data=data, query=query)
+
+    # test si une erreur arrive dans la requète
     if rstatus.get("status") != 200:
         return rstatus
+
+    # message de succès de mise à jour de commentaire
     return {"message": "Le commentaire a été mis à jour avec succès !", "status": 200}
 
 
@@ -152,8 +164,12 @@ def recuperer_commentaire(config_db: dict, query: dict = None) -> dict:
         Un dictionnaire avec le résultat de l'opération.
     """
     rstatus: dict = effectuer_operation_db(config_db, "commentaire", "get", query=query)
+
+    # test si une erreur arrive dans la requète
     if rstatus.get("status") != 200:
         return rstatus
+
+    # message de succès de mise à jour de commentaire
     return {
         "message": "La liste des commentaires a été récupérée avec succès !",
         "status": 200,
@@ -189,9 +205,13 @@ def ajouter_notes(config_db: dict, nom_bouteille: str, note: float, id_user: int
         "note": note,
         "nom_bouteille": nom_bouteille
     }
+
     rstatus: dict = effectuer_operation_db(config_db, "note", "insert", data)
+
+    # test si une erreur arrive dans la requète
     if rstatus.get("status") != 200:
         return rstatus
+
     return {"message": "La note a été ajoutée avec succès !", "status": 200}
 
 
@@ -212,8 +232,11 @@ def supprimer_notes(config_db: dict, query: dict) -> dict:
         Un dictionnaire avec le résultat de l'opération.
     """
     rstatus: dict = effectuer_operation_db(config_db, "note", "delete", query=query)
+
+    # test si une erreur arrive dans la requète
     if rstatus.get("status") != 200:
         return rstatus
+
     return {"message": "La note a été supprimée avec succès !", "status": 200}
 
 
@@ -236,8 +259,11 @@ def mettre_a_jour_notes(config_db: dict, query: dict, data: dict) -> dict:
         Un dictionnaire avec le résultat de l'opération.
     """
     rstatus: dict = effectuer_operation_db(config_db, "note", "update", data=data, query=query)
+
+    # test si une erreur arrive dans la requète
     if rstatus.get("status") != 200:
         return rstatus
+
     return {"message": "La note a été mise à jour avec succès !", "status": 200}
 
 
@@ -259,8 +285,10 @@ def recuperer_notes(config_db: dict, query: dict = None) -> dict:
     """
     rstatus: dict = effectuer_operation_db(config_db, "note", "get", query=query)
 
+    # test si une erreur arrive dans la requète
     if rstatus.get("status") != 200:
         return rstatus
+
     return {
         "message": "La liste des notes a été récupérée avec succès !",
         "status": 200,
@@ -279,10 +307,6 @@ def recuperer_archives(config_db: dict, collection: str, query: dict = None) -> 
     ----------
     config_db : dict
         La configuration de la base de données.
-    collection : str
-        Le nom de la collection MongoDB.
-    query : dict, optional
-        La requête pour localiser les documents (par défaut None, ce qui récupère tous les documents).
 
     Returns
     -------
@@ -290,10 +314,16 @@ def recuperer_archives(config_db: dict, collection: str, query: dict = None) -> 
         Un dictionnaire avec le résultat de l'opération.
     """
     rstatus: dict = effectuer_operation_db(config_db, collection, "get", query=query)
+
+    # test si une erreur arrive dans la requète
     if rstatus.get("status") != 200:
         return rstatus
+
     return {
         "message": f"La liste des données de la collection '{collection}' a été récupérée avec succès !",
         "status": 200,
         "archives": rstatus.get("data")
     }
+
+
+

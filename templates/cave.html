@@ -1,10 +1,43 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Title</title>
-</head>
-<body>
+{% extends "base.html" %}
 
-</body>
-</html>
+{% block title %}Cave à Vin - Vos Caves{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">Vos Caves</h1>
+        <a href="/add_cave" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+            + Ajouter une Cave
+        </a>
+    </div>
+
+    {% if not caves or caves | length == 0 %}
+        <div class="bg-yellow-200 text-yellow-800 p-4 rounded-md mb-4">
+            <p>Vous n'avez pas encore de cave. Commencez par en ajouter une !</p>
+        </div>
+    {% else %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for cave_name, cave_data in caves.items() %}
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <img src="https://source.unsplash.com/featured/?wine-cellar" alt="Wine Cave Image" class="w-full h-48 object-cover rounded-md mb-4">
+                <h2 class="text-xl font-semibold">{{ cave_name }}</h2>
+                <p class="text-gray-600">Capacité: {{ cave_data.nb_emplacement }} emplacements</p>
+                <p class="text-gray-600">Étagères: {{ cave_data.etageres | length }}</p>
+                {% if cave_data.temperature is defined %}
+                    <p class="text-gray-600">Température: {{ cave_data.temperature }}°C</p>
+                {% endif %}
+                {% if cave_data.humidite is defined %}
+                    <p class="text-gray-600">Humidité: {{ cave_data.humidite }}%</p>
+                {% endif %}
+                <div class="mt-4 flex justify-between">
+                    <a href="/cave/{{ cave_name }}" class="text-blue-500 hover:underline">Voir Détails</a>
+                    <a href="/delete_cave/{{ cave_name }}" class="text-red-500 hover:underline" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette cave ?');">
+                        Supprimer
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

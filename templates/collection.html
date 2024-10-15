@@ -1,10 +1,199 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "base.html" %}
 
-</body>
-</html>
+{% block title %}Cave à Vin - Vos Collections{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">Votre Collection de Bouteilles</h1>
+        <button onclick="showAddBottlePopup()" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+            + Ajouter une Bouteille
+        </button>
+    </div>
+
+    {% if not bouteilles or bouteilles | length == 0 %}
+        <div class="bg-yellow-200 text-yellow-800 p-4 rounded-md mb-4">
+            <p>Aucune bouteille n'a été trouvée dans votre collection.</p>
+        </div>
+    {% else %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for nom_bouteille, bouteille in bouteilles.items() %}
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <img src="{{ bouteille.photo }}" alt="{{ bouteille.nom }}" class="w-full h-48 object-cover rounded-md mb-4">
+                <h2 class="text-xl font-semibold">{{ bouteille.nom }}</h2>
+                <p class="text-gray-600">Type: {{ bouteille.type }}</p>
+                <p class="text-gray-600">Année: {{ bouteille.annee }}</p>
+                <p class="text-gray-600">Région: {{ bouteille.region }}</p>
+                <p class="text-gray-600">Prix: {{ bouteille.prix }}€</p>
+                <p class="text-gray-600">Étagère: {{ bouteille.num_etagere }}</p>
+                <p class="text-gray-600">Moyenne: {{ bouteille.moyen }}</p>
+                <p class="text-gray-600">Commentaires: {{ bouteille.commentaire | join(", ") }}</p>
+                <div class="mt-4 flex justify-between">
+                    <a href="/bottle/{{ nom_bouteille }}" class="text-blue-500 hover:underline">Voir Détails</a>
+                    <button onclick="showMoveBottlePopup('{{ nom_bouteille }}')" class="text-green-500 hover:underline">Déplacer</button>
+                    <a href="/archive_bottle/{{ nom_bouteille }}" class="text-yellow-500 hover:underline">Archiver</a>
+                    <a href="/delete_bottle/{{ nom_bouteille }}" class="text-red-500 hover:underline" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette bouteille ?');">
+                        Supprimer
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
+<!-- Add Bottle Popup -->
+<div id="addBottlePopup" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3 text-center">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Ajouter une nouvelle bouteille</h3>
+            <div class="mt-2 px-7 py-3">
+                <form id="addBottleForm">
+                    <input type="text" name="nom" placeholder="Nom de la bouteille" class="mt-2 px-3 py-2 bg-white border shadow-sm border-slate-300 placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-sky-500 block w-full rounded-md sm:text-sm focus:ring-1" required>
+                    <input type="text" name="type" placeholder="Type de vin" class="mt-2 px-3 py-2 bg-white border shadow-sm border-slate-300 placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-sky-500 block w-full rounded-md sm:text-sm focus:ring-1" required>
+                    <input type="number" name="annee" placeholder="Année" class="mt-2 px-3 py-2 bg-white border shadow-sm border-slate-300 placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-sky-500 block w-full rounded-md sm:text-sm focus:ring-1" required>
+                    <input type="text" name="region" placeholder="Région" class="mt-2 px-3 py-2 bg-white border shadow-sm border-slate-300 placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-sky-500 block w-full rounded-md sm:text-sm focus:ring-1" required>
+                    <input type="number" name="prix" placeholder="Prix" class="mt-2 px-3 py-2 bg-white border shadow-sm border-slate-300 placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-sky-500 block w-full rounded-md sm:text-sm focus:ring-1" required>
+                    <div class="items-center px-4 py-3">
+                        <button id="addBottleButton" type="submit" class="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                            Ajouter
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Move Bottle Popup -->
+<div id="moveBottlePopup" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3 text-center">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Déplacer la bouteille</h3>
+            <div class="mt-2 px-7 py-3">
+                <form id="moveBottleForm">
+                    <input type="hidden" id="moveBottleName" name="bottle_name">
+                    <select name="cave" id="caveSelect" class="mt-2 px-3 py-2 bg-white border shadow-sm border-slate-300 focus:outline-none focus:border-sky-500 focus:ring-sky-500 block w-full rounded-md sm:text-sm focus:ring-1" required>
+                        <option value="">Sélectionnez une cave</option>
+                        <!-- Add options dynamically with JavaScript -->
+                    </select>
+                    <select name="etagere" id="etagereSelect" class="mt-2 px-3 py-2 bg-white border shadow-sm border-slate-300 focus:outline-none focus:border-sky-500 focus:ring-sky-500 block w-full rounded-md sm:text-sm focus:ring-1" required>
+                        <option value="">Sélectionnez une étagère</option>
+                        <!-- Add options dynamically with JavaScript -->
+                    </select>
+                    <div class="items-center px-4 py-3">
+                        <button type="submit" class="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                            Déplacer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showAddBottlePopup() {
+    document.getElementById('addBottlePopup').classList.remove('hidden');
+}
+
+function hideAddBottlePopup() {
+    document.getElementById('addBottlePopup').classList.add('hidden');
+}
+
+document.getElementById('addBottleForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    fetch('/add_bottle', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert('Bouteille ajoutée avec succès!');
+            hideAddBottlePopup();
+            location.reload(); // Refresh the page to show the new bottle
+        } else {
+            alert('Erreur lors de l\'ajout de la bouteille: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Une erreur s\'est produite lors de l\'ajout de la bouteille.');
+    });
+});
+
+function showMoveBottlePopup(bottleName) {
+    document.getElementById('moveBottlePopup').classList.remove('hidden');
+    document.getElementById('moveBottleName').value = bottleName;
+    // Fetch caves and populate the cave select
+    fetchCaves();
+}
+
+function hideMoveBottlePopup() {
+    document.getElementById('moveBottlePopup').classList.add('hidden');
+}
+
+function fetchCaves() {
+    fetch('/get_caves')
+        .then(response => response.json())
+        .then(data => {
+            const caveSelect = document.getElementById('caveSelect');
+            caveSelect.innerHTML = '<option value="">Sélectionnez une cave</option>';
+            data.caves.forEach(cave => {
+                caveSelect.innerHTML += `<option value="${cave.id}">${cave.name}</option>`;
+            });
+        });
+}
+
+document.getElementById('caveSelect').addEventListener('change', function() {
+    const caveId = this.value;
+    if (caveId) {
+        fetch(`/get_etageres/${caveId}`)
+            .then(response => response.json())
+            .then(data => {
+                const etagereSelect = document.getElementById('etagereSelect');
+                etagereSelect.innerHTML = '<option value="">Sélectionnez une étagère</option>';
+                data.etageres.forEach(etagere => {
+                    etagereSelect.innerHTML += `<option value="${etagere.id}">${etagere.name}</option>`;
+                });
+            });
+    }
+});
+
+document.getElementById('moveBottleForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    fetch('/move_bottle', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert('Bouteille déplacée avec succès!');
+            hideMoveBottlePopup();
+            location.reload(); // Refresh the page to show the updated bottle location
+        } else {
+            alert('Erreur lors du déplacement de la bouteille: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Une erreur s\'est produite lors du déplacement de la bouteille.');
+    });
+});
+
+// Close the popups when clicking outside of them
+window.onclick = function(event) {
+    const addPopup = document.getElementById('addBottlePopup');
+    const movePopup = document.getElementById('moveBottlePopup');
+    if (event.target == addPopup) {
+        hideAddBottlePopup();
+    } else if (event.target == movePopup) {
+        hideMoveBottlePopup();
+    }
+}
+</script>
+{% endblock %}

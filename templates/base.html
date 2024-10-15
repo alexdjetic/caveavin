@@ -20,6 +20,18 @@
                 <li><a href="/cave" class="hover:text-gray-400">Cave</a></li>
                 <li><a href="/profil" class="hover:text-gray-400">Profile</a></li>
             </ul>
+
+            <!-- User Login Info -->
+            <div>
+                {% if login %}
+                    <span class="font-semibold">
+                        {{ prenom[0] }}. {{ nom }} ({{ login }})
+                    </span>
+                    <a href="/logout" class="ml-4 hover:text-gray-400">Logout</a>
+                {% else %}
+                    <a href="/login" class="hover:text-gray-400">Login</a>
+                {% endif %}
+            </div>
         </nav>
     </header>
 

@@ -330,7 +330,7 @@ class Bouteille(BaseModel):
         # Bottle does not exist, create a new entry
         return self.create_bouteille(connex)
 
-    def create_bouteille(self, connex: Connexdb) -> dict:
+    def create_bouteille(self) -> dict:
         """
         Creates a new bottle in the database.
 
@@ -357,7 +357,7 @@ class Bouteille(BaseModel):
             "num_etagere": self.num_etagere,
             "numbers": self.numbers
         }
-
+        connex: Connexdb = Connexdb(**self.config_db)
         create_result: dict = connex.insert_data_into_collection(self.collections, bottle_data)
 
         if create_result.get("status") != 200:
@@ -498,9 +498,9 @@ if __name__ == "__main__":
     print(create_result)
 
     # Archiver la bouteille
-    archive_result = bouteille.archiver()
-    print(archive_result)
+    # archive_result = bouteille.archiver()
+    # print(archive_result)
 
     # Consulter les détails de la bouteille
-    details = bouteille.consulter()
-    print(details)
+    # details = bouteille.consulter()
+    # print(details)
