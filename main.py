@@ -33,14 +33,14 @@ async def index(request: Request, user_cookies: dict = Depends(get_user_cookies)
     })
 
 
-@app.get("/404", response_class=HTMLResponse)
+@app.get("/error", response_class=HTMLResponse)
 async def not_found(request: Request):
-    return templates.TemplateResponse("404.html", {"request": request})
+    return templates.TemplateResponse("error.html", {"request": request})
 
 
 @app.exception_handler(404)  # This handles 404 errors
 async def custom_404_handler(request: Request, exc):
-    return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
+    return templates.TemplateResponse("error.html", {"request": request}, status_code=404)
 
 
 # Main entry point to run the FastAPI app

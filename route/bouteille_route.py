@@ -63,11 +63,14 @@ async def add_bouteille(
 
 @router.get("/{nom_bouteille}", response_class=HTMLResponse)
 async def get_bouteille(request: Request, nom_bouteille: str, user_cookies: dict = Depends(get_user_cookies)):
+    print(f"Received bottle name: {nom_bouteille}")  # Debug print
     if not user_cookies["login"]:
         return RedirectResponse(url="/user/login", status_code=302)
 
     bouteille = Bouteille(nom=nom_bouteille, config_db=config_db)
     bottle_data = bouteille.get_all_information()
+
+    print(f"Bottle data retrieved: {bottle_data}")  # Debug print
 
     if bottle_data.get("status") != 200:
         return templates.TemplateResponse("error.html", {
@@ -162,6 +165,8 @@ async def get_bouteille(request: Request, nom_bouteille: str, user_cookies: dict
 
     bouteille = Bouteille(nom=nom_bouteille, config_db=config_db)
     bottle_data = bouteille.get_all_information()
+
+    print(f"Bottle data retrieved: {bottle_data}")  # Debug print
 
     if bottle_data.get("status") != 200:
         return templates.TemplateResponse("error.html", {

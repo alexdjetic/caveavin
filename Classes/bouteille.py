@@ -203,15 +203,14 @@ class Bouteille(BaseModel):
     def get_all_information(self) -> dict:
         """
         Retrieves all information about the bottle, including its details, comments, and ratings.
-
-        Returns
-        -------
-        dict
-            A dictionary containing the bottle information, comments, and ratings.
         """
+        print(f"Fetching information for bottle: {self.nom}")  # Debug print
+
         # Fetch the bottle information from the database
         bottle_query = {"nom": self.nom}
         bottle_info_result = effectuer_operation_db(self.config_db, "bouteille", "get", query=bottle_query)
+
+        print(f"Bottle info result: {bottle_info_result}")  # Debug print
 
         if bottle_info_result.get("status") != 200 or not bottle_info_result.get("data"):
             return {
@@ -230,6 +229,8 @@ class Bouteille(BaseModel):
         # Fetch ratings associated with the bottle
         ratings_result = effectuer_operation_db(self.config_db, "note", "get", {"nom_bouteille": self.nom})
         bottle_info["notes"] = ratings_result.get("data", [])
+
+        print(f"Final bottle information: {bottle_info}")  # Debug print
 
         return {
             "message": "Bouteille récupérée avec succès !",
@@ -255,7 +256,7 @@ class Bouteille(BaseModel):
         connex: Connexdb = Connexdb(**self.config_db)
 
         # Query to filter ratings by name
-        query = {"nom": self.nom}
+        query = {"nom_bouteille": self.nom}  # Ensure the query matches the field in the database
         notes_result = connex.get_data_from_collection("note", query)
 
         if notes_result.get("status") != 200:
@@ -265,7 +266,7 @@ class Bouteille(BaseModel):
             }
 
         # Extract the values from the retrieved ratings
-        notes = [note['value'] for note in notes_result['data']]
+        notes = [note['value'] for note in notes_result['data'] if 'value' in note]  # Ensure 'value' exists
 
         if not notes:
             return {
@@ -509,6 +510,8 @@ if __name__ == "__main__":
     # Consulter les détails de la bouteille
     # details = bouteille.consulter()
     # print(details)
+
+
 
 
 
