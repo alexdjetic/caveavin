@@ -21,6 +21,12 @@
                 <li><a href="/user/profil" class="hover:text-gray-400">Profile</a></li>
             </ul>
 
+            <!-- Search Bar -->
+            <form action="/bottle/search/" method="post" class="flex items-center space-x-2">
+                <input type="text" name="filtre" placeholder="Rechercher une bouteille..." class="px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black" required>
+                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">Rechercher</button>
+            </form>
+
             <!-- User Login Info -->
             <div>
                 {% if login %}

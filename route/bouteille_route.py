@@ -2,7 +2,8 @@ from fastapi import APIRouter, Request, Depends, Form, HTTPException
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from Classes import Bouteille, Personne
-from .dependencies import config_db, get_user_cookies
+from .dependencies import config_db, get_user_cookies, effectuer_operation_db, ajouter_commentaire, ajouter_notes
+from datetime import datetime
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -68,6 +69,13 @@ async def get_bouteille(request: Request, nom_bouteille: str, user_cookies: dict
     bouteille = Bouteille(nom=nom_bouteille, config_db=config_db)
     bottle_data = bouteille.get_all_information()
 
+    if bottle_data.get("status") != 200:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            **user_cookies,
+            "message": bottle_data.get("message", "Failed to retrieve bottle information"),
+        })
+
     return templates.TemplateResponse("bottle_details.html", {
         "request": request,
         **user_cookies,
@@ -75,7 +83,7 @@ async def get_bouteille(request: Request, nom_bouteille: str, user_cookies: dict
     })
 
 @router.get("/delete/{nom_bouteille}", response_class=HTMLResponse)
-async def get_bouteille(request: Request, nom_bouteille: str, user_cookies: dict = Depends(get_user_cookies)):
+async def del_bouteille(request: Request, nom_bouteille: str, user_cookies: dict = Depends(get_user_cookies)):
     if not user_cookies["login"]:
         return RedirectResponse(url="/user/login", status_code=302)
 
@@ -155,10 +163,17 @@ async def get_bouteille(request: Request, nom_bouteille: str, user_cookies: dict
     bouteille = Bouteille(nom=nom_bouteille, config_db=config_db)
     bottle_data = bouteille.get_all_information()
 
+    if bottle_data.get("status") != 200:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            **user_cookies,
+            "message": bottle_data.get("message", "Failed to retrieve bottle information"),
+        })
+
     return templates.TemplateResponse("bottle_details.html", {
         "request": request,
         **user_cookies,
-        "data": bottle_data
+        "data": bottle_data["data"]
     })
 
 @router.post("/move", response_class=JSONResponse)
@@ -179,3 +194,84 @@ async def move_bouteille(
         return JSONResponse(content={"status": "success", "message": "Bottle moved successfully"})
     else:
         return JSONResponse(content={"status": "error", "message": result.get("message", "Failed to move bottle")})
+
+
+@router.post("/search", response_class=HTMLResponse)
+async def search(
+    request: Request,
+    filtre: str = "",
+    user_cookies: dict = Depends(get_user_cookies)
+):
+    # Transform the filter string into a regex pattern
+    regex_pattern = f".*{filtre}.*"  # Automatically wraps the input with '.*' for regex matching
+
+    # Create a query to search for the bottle using the transformed filter
+    query: dict = {"nom": {"$regex": regex_pattern, "$options": "i"}}  # Using regex for case-insensitive search
+    
+    # Call the effectuer_operation_db function to fetch data from the database
+    response = effectuer_operation_db(config_db, "bouteille", "get", query=query)
+    
+    # Check for errors in the response
+    if response.get("status") != 200:
+        error_message = response.get("message", "Une erreur s'est produite lors de la récupération des bouteilles.")
+        return templates.TemplateResponse("search_bouteille.html", {
+            "request": request,
+            **user_cookies,
+            "data": [],  # No data to show in case of an error
+            "error_message": error_message  # Pass the error message to the template
+        })
+
+    # Extract data from the response if successful
+    data = response.get("data", [])
+
+    # Print data for debugging
+    print(data)
+
+    # Check if data is empty and prepare the message accordingly
+    if not data:
+        message = "Aucune bouteille n'a été trouvée pour ce filtre."
+    else:
+        message = ""
+
+    return templates.TemplateResponse("search_bouteille.html", {
+        "request": request,
+        **user_cookies,
+        "data": data,
+        "message": message,  # Pass the message to the template
+        "error_message": "",  # Clear error message if there are no errors
+        "filtre": filtre
+    })
+
+@router.post("/commentandpair", response_class=JSONResponse)
+async def comment_and_pair(
+    request: Request,
+    user_cookies: dict = Depends(get_user_cookies),
+    comment: str = Form(...),  # Ensure to use ... to require this field
+    rating: float = Form(...),  # Ensure to use ... to require this field
+    nom_bouteille: str = Form(...)
+):
+    if not user_cookies["login"]:
+        raise HTTPException(status_code=401, detail="User not logged in")
+
+    # Use the login as the unique identifier for the user
+    login = user_cookies["login"]
+
+    # Get the current date in the desired format (e.g., YYYY-MM-DD)
+    current_date = datetime.now().strftime("%Y-%m-%d")
+
+    # Add the comment to the database
+    comment_response = ajouter_commentaire(config_db, nom_bouteille, comment, login, date=current_date)
+
+    # Check if the comment was added successfully
+    if comment_response.get("status") != 200:
+        return JSONResponse(content={"status": "error", "message": comment_response.get("message")})
+
+    # Add the rating to the database
+    rating_response = ajouter_notes(config_db, nom_bouteille, rating, login)
+
+    # Check if the rating was added successfully
+    if rating_response.get("status") != 200:
+        return JSONResponse(content={"status": "error", "message": rating_response.get("message")})
+
+    # Redirect to the bottle details page
+    return RedirectResponse(url=f"/bottle/{nom_bouteille}", status_code=302)

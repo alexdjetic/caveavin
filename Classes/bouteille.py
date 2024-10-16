@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from Classes.connexiondb import Connexdb
-
+from route.dependencies import effectuer_operation_db
 
 class Bouteille(BaseModel):
     """
@@ -202,57 +202,39 @@ class Bouteille(BaseModel):
 
     def get_all_information(self) -> dict:
         """
-        Retrieves all information about the bottle from the database.
+        Retrieves all information about the bottle, including its details, comments, and ratings.
 
         Returns
         -------
         dict
-            A dictionary containing all the information related to the bottle.
+            A dictionary containing the bottle information, comments, and ratings.
         """
-        if not self.config_db:
-            return {
-                "message": "Donnez la configuration pour la base de données MongoDB",
-                "status": 500,
-            }
+        # Fetch the bottle information from the database
+        bottle_query = {"nom": self.nom}
+        bottle_info_result = effectuer_operation_db(self.config_db, "bouteille", "get", query=bottle_query)
 
-        # Retrieve the bottle information
-        connex: Connexdb = Connexdb(**self.config_db)
-        query = {"nom": self.nom}
-        bouteille_result = connex.get_data_from_collection(self.collections, query)
-
-        if bouteille_result.get("status") != 200 or not bouteille_result['data']:
+        if bottle_info_result.get("status") != 200 or not bottle_info_result.get("data"):
             return {
-                "message": "Bouteille non trouvée.",
                 "status": 404,
+                "message": "Bouteille non trouvée.",
                 "data": []
             }
 
-        # Assuming the bottle is the first item in the result
-        bouteille = bouteille_result['data'][0]
+        # Get the bottle information
+        bottle_info = bottle_info_result["data"][0]
 
-        # Get comments and ratings
-        commentaires = self.get_commentaires().get("data", [])
-        notes = self.get_notes().get("data", [])
+        # Fetch comments associated with the bottle
+        comments_result = effectuer_operation_db(self.config_db, "commentaire", "get", {"nom_bouteille": self.nom})
+        bottle_info["commentaires"] = comments_result.get("data", [])
 
-        # Combine all information into a single dictionary
-        all_information: dict = {
-            "nom": bouteille.get("nom"),
-            "type": bouteille.get("type"),
-            "annee": bouteille.get("annee"),
-            "region": bouteille.get("region"),
-            "prix": bouteille.get("prix"),
-            "photo": bouteille.get("photo"),
-            "commentaires": commentaires,
-            "notes": notes,
-            "moyen": self.moyenne(),
-            "num_etagere": bouteille.get("num_etagere"),
-            "cave": bouteille.get("cave"),
-        }
+        # Fetch ratings associated with the bottle
+        ratings_result = effectuer_operation_db(self.config_db, "note", "get", {"nom_bouteille": self.nom})
+        bottle_info["notes"] = ratings_result.get("data", [])
 
         return {
-            "message": "Toutes les informations ont été récupérées avec succès !",
+            "message": "Bouteille récupérée avec succès !",
             "status": 200,
-            "data": all_information
+            "data": bottle_info
         }
 
     def moyenne(self) -> dict:
@@ -527,5 +509,7 @@ if __name__ == "__main__":
     # Consulter les détails de la bouteille
     # details = bouteille.consulter()
     # print(details)
+
+
 
 

@@ -4,76 +4,160 @@
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
-    <div class="bg-white rounded-lg shadow-lg p-6">
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold">{{ data.nom }} - Détails</h1>
-            <div class="space-x-4">
-                <button onclick="showMoveBottlePopup('{{ data.nom }}')" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">
-                    Déplacer
-                </button>
-                <a href="/bottle/archive/{{ data.nom }}" class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600">
-                    Archiver
+    {% if data %}
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-2xl font-bold">{{ data.nom }} - Détails</h1>
+                <div class="space-x-4">
+                    <button onclick="showMoveBottlePopup('{{ data.nom }}')" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">
+                        Déplacer
+                    </button>
+                    <a href="/bottle/archive/{{ data.nom }}" class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600">
+                        Archiver
+                    </a>
+                    <a href="/bottle/delete/{{ data.nom }}" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette bouteille ?');">
+                        Supprimer
+                    </a>
+                </div>
+            </div>
+
+            <!-- Bottle Information -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <img src="{{ data.photo }}" alt="{{ data.nom }}" class="w-full h-64 object-cover rounded-md mb-4">
+                </div>
+                <div class="space-y-4">
+                    <p class="text-gray-700"><strong>Nom:</strong> {{ data.nom }}</p>
+                    <p class="text-gray-700"><strong>Type:</strong> {{ data.type }}</p>
+                    <p class="text-gray-700"><strong>Année:</strong> {{ data.annee }}</p>
+                    <p class="text-gray-700"><strong>Région:</strong> {{ data.region }}</p>
+                    <p class="text-gray-700"><strong>Prix:</strong> {{ data.prix }}€</p>
+                    <p class="text-gray-700"><strong>Étagère:</strong> {{ data.num_etagere }}</p>
+                    <p class="text-gray-700"><strong>Cave:</strong> {{ data.cave }}</p>
+                    <p class="text-gray-700"><strong>Note Moyenne:</strong> {{ data.moyen }}</p>
+                </div>
+            </div>
+
+            <!-- Comments Section -->
+            <div class="mt-6">
+                <h2 class="text-xl font-semibold mb-2 flex justify-between items-center">
+                    Commentaires
+                    <button onclick="toggleSection('comments')" class="text-gray-500 focus:outline-none">
+                        <span id="comments-toggle">></span>
+                    </button>
+                </h2>
+                <div id="comments" class="hidden">
+                    {% if data.commentaires and data.commentaires | length > 0 %}
+                        <div class="space-y-4">
+                            {% for commentaire in data.commentaires %}
+                                <div class="bg-gray-100 p-4 rounded-md shadow-md">
+                                    <p class="text-gray-800"><strong>{{ commentaire.comment }}</strong></p>
+                                    <p class="text-gray-600"><strong>Auteur:</strong> {{ commentaire.auteur }} - <strong>Date:</strong> {{ commentaire.date }}</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-gray-600">Aucun commentaire pour cette bouteille.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Ratings Section -->
+            <div class="mt-6">
+                <h2 class="text-xl font-semibold mb-2 flex justify-between items-center">
+                    Notes
+                    <button onclick="toggleSection('ratings')" class="text-gray-500 focus:outline-none">
+                        <span id="ratings-toggle">></span>
+                    </button>
+                </h2>
+                <div id="ratings" class="hidden">
+                    {% if data.notes and data.notes | length > 0 %}
+                        <div class="space-y-4">
+                            {% for note in data.notes %}
+                                <div class="bg-gray-100 p-4 rounded-md shadow-md">
+                                    <p class="text-gray-800"><strong>{{ note.note }} / 5</strong></p>
+                                    <p class="text-gray-600"><strong>Auteur:</strong> {{ note.auteur }}</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-gray-600">Aucune note pour cette bouteille.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="mt-6 flex justify-between">
+                <a href="/bottle/update/{{ data.nom }}" class="bg-teal-500 text-white px-4 py-2 rounded-md hover:bg-teal-600">
+                    Mettre à jour
                 </a>
-                <a href="/bottle/delete/{{ data.nom }}" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette bouteille ?');">
-                    Supprimer
-                </a>
+                <a href="/user/collection" class="text-blue-500 hover:underline">Retour</a>
+            </div>
+
+            <!-- Comments and Rating Section -->
+            <div class="mt-6">
+                {% if login %}
+                    <h2 class="text-xl font-semibold mb-2">Ajouter un Commentaire et Note</h2>
+                    <form id="commentForm" action="/bottle/commentandpair" method="POST">
+                        <div class="flex flex-col space-y-4">
+                            <input type="hidden" name="nom_bouteille" value="{{ data.nom }}">
+                            <textarea name="comment" rows="3" placeholder="Votre commentaire..." class="border rounded-md p-2" required></textarea>
+
+                            <div class="flex items-center space-x-2">
+                                <span class="text-gray-700">Note:</span>
+                                <div id="star-rating" class="flex">
+                                    {% for i in range(1, 6) %}
+                                        <input type="radio" id="star{{ i }}" name="rating" value="{{ i }}" class="hidden" required>
+                                        <label for="star{{ i }}" class="cursor-pointer text-gray-400 hover:text-yellow-500 text-3xl" onclick="setRating({{ i }})">&#9733;</label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">Envoyer</button>
+                        </div>
+                    </form>
+                {% else %}
+                    <p class="text-gray-600">Vous devez être <a href="/user/login" class="text-blue-500 hover:underline">connecté</a> pour ajouter un commentaire et une note.</p>
+                {% endif %}
             </div>
         </div>
-
-        <!-- Bottle Information -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <img src="{{ data.photo }}" alt="{{ data.nom }}" class="w-full h-64 object-cover rounded-md mb-4">
-            </div>
-            <div class="space-y-4">
-                <p class="text-gray-700"><strong>Nom:</strong> {{ data.nom }}</p>
-                <p class="text-gray-700"><strong>Type:</strong> {{ data.type }}</p>
-                <p class="text-gray-700"><strong>Année:</strong> {{ data.annee }}</p>
-                <p class="text-gray-700"><strong>Région:</strong> {{ data.region }}</p>
-                <p class="text-gray-700"><strong>Prix:</strong> {{ data.prix }}€</p>
-                <p class="text-gray-700"><strong>Étagère:</strong> {{ data.num_etagere }}</p>
-                <p class="text-gray-700"><strong>Cave:</strong> {{ data.cave }}</p>
-                <p class="text-gray-700"><strong>Note Moyenne:</strong> {{ data.moyen }}</p>
-            </div>
-        </div>
-
-        <!-- Comments and Notes -->
+    {% else %}
+        <p class="text-gray-600">Aucune bouteille n'a été trouvée.</p>
         <div class="mt-6">
-            <h2 class="text-xl font-semibold mb-2">Commentaires</h2>
-            {% if data.commentaires and data.commentaires | length > 0 %}
-                <ul class="list-disc list-inside">
-                    {% for commentaire in data.commentaires %}
-                        <li>{{ commentaire }}</li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p class="text-gray-600">Aucun commentaire pour cette bouteille.</p>
-            {% endif %}
+            <a href="/user/collection" class="text-blue-500 hover:underline">Retour à ma collection</a>
         </div>
-
-        <div class="mt-6">
-            <h2 class="text-xl font-semibold mb-2">Notes</h2>
-            {% if data.notes and data.notes | length > 0 %}
-                <ul class="list-disc list-inside">
-                    {% for note in data.notes %}
-                        <li>{{ note }} / 5</li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p class="text-gray-600">Aucune note pour cette bouteille.</p>
-            {% endif %}
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="mt-6 flex justify-between">
-            <a href="/bottle/edit/{{ data.nom }}" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
-                Modifier
-            </a>
-            <a href="/bottle/update/{{ data.nom }}" class="bg-teal-500 text-white px-4 py-2 rounded-md hover:bg-teal-600">
-                Mettre à jour
-            </a>
-            <a href="/user/collection" class="text-blue-500 hover:underline">Retour</a>
-        </div>
-    </div>
+    {% endif %}
 </div>
+
+<script>
+    function toggleSection(section) {
+        const content = document.getElementById(section);
+        const toggleIcon = document.getElementById(section + '-toggle');
+
+        if (content.classList.contains('hidden')) {
+            content.classList.remove('hidden');
+            toggleIcon.textContent = '▼'; // Change to '▼' when expanded
+        } else {
+            content.classList.add('hidden');
+            toggleIcon.textContent = '>'; // Change to '>' when collapsed
+        }
+    }
+
+    function setRating(rating) {
+        const stars = document.querySelectorAll('#star-rating label');
+        stars.forEach((star, index) => {
+            if (index < rating) {
+                star.classList.add('text-yellow-500'); // Highlight selected stars
+            } else {
+                star.classList.remove('text-yellow-500'); // Remove highlight from unselected stars
+            }
+        });
+    }
+
+    // Ensure the correct stars are highlighted on page load if a rating was previously set
+    const selectedRating = document.querySelector('input[name="rating"]:checked');
+    if (selectedRating) {
+        setRating(selectedRating.value);
+    }
+</script>
+
 {% endblock %}

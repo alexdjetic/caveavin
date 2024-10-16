@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Résultats de Recherche{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold mb-4">Résultats de Recherche pour "{{ filtre }}"</h1>
+    
+    {% if data and data | length > 0 %}
+        <table class="min-w-full bg-white border border-gray-300">
+            <thead>
+                <tr class="bg-gray-200">
+                    <th class="py-2 px-4 text-left">Nom</th>
+                    <th class="py-2 px-4 text-left">Type</th>
+                    <th class="py-2 px-4 text-left">Année</th>
+                    <th class="py-2 px-4 text-left">Prix</th>
+                    <th class="py-2 px-4 text-left">Région</th>
+                    <th class="py-2 px-4 text-left">Détails</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for bottle in data %}
+                    <tr class="border-b">
+                        <td class="py-2 px-4">{{ bottle.nom }}</td>
+                        <td class="py-2 px-4">{{ bottle.type }}</td>
+                        <td class="py-2 px-4">{{ bottle.annee }}</td>
+                        <td class="py-2 px-4">{{ bottle.prix }}€</td>
+                        <td class="py-2 px-4">{{ bottle.region }}</td>
+                        <td class="py-2 px-4">
+                            <a href="/bottle/{{ bottle.nom }}" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">Voir Détails</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="text-gray-600">Aucune bouteille trouvée pour votre recherche.</p>
+    {% endif %}
+    
+    <div class="mt-6">
+        <a href="/user/collection" class="text-blue-500 hover:underline">Retour à ma collection</a>
+    </div>
+</div>
+{% endblock %}

@@ -78,7 +78,7 @@ def effectuer_operation_db(config_db: dict, collection: str, operation: str, dat
 ##### Gestion des commentaires #####
 ####################################
 
-def ajouter_commentaire(config_db: dict, nom_bouteille: str, commentaire: str, id_user: int, date: str) -> dict:
+def ajouter_commentaire(config_db: dict, nom_bouteille: str, commentaire: str, login: str, date: str) -> dict:
     """
     Ajoute un commentaire à la collection 'commentaire'.
 
@@ -90,8 +90,8 @@ def ajouter_commentaire(config_db: dict, nom_bouteille: str, commentaire: str, i
         Le nom de la bouteille.
     commentaire : str
         Le contenu du commentaire.
-    id_user : int
-        L'ID de l'utilisateur ajoutant le commentaire.
+    login : str
+        Le login de l'utilisateur ajoutant le commentaire.
     date : str
         La date du commentaire.
 
@@ -101,7 +101,7 @@ def ajouter_commentaire(config_db: dict, nom_bouteille: str, commentaire: str, i
         Un dictionnaire avec le résultat de l'opération.
     """
     data: dict = {
-        "auteur": id_user,
+        "auteur": login,  # Use login as the unique identifier
         "comment": commentaire,
         "nom_bouteille": nom_bouteille,
         "date": date
@@ -112,7 +112,6 @@ def ajouter_commentaire(config_db: dict, nom_bouteille: str, commentaire: str, i
     if rstatus.get("status") != 200:
         return rstatus
 
-    # message de succès d'ajout de commentaire
     return {"message": "Le commentaire a été ajouté avec succès !", "status": 200}
 
 
@@ -203,7 +202,7 @@ def recuperer_commentaire(config_db: dict, query: dict = None) -> dict:
 #####     Gestion des notes    #####
 ####################################
 
-def ajouter_notes(config_db: dict, nom_bouteille: str, note: float, id_user: int) -> dict:
+def ajouter_notes(config_db: dict, nom_bouteille: str, note: float, login: str) -> dict:
     """
     Ajoute une note à la collection 'note'.
 
@@ -215,8 +214,8 @@ def ajouter_notes(config_db: dict, nom_bouteille: str, note: float, id_user: int
         Le nom de la bouteille.
     note : float
         La valeur de la note.
-    id_user : int
-        L'ID de l'utilisateur ajoutant la note.
+    login : str
+        Le login de l'utilisateur ajoutant la note.
 
     Returns
     -------
@@ -224,7 +223,7 @@ def ajouter_notes(config_db: dict, nom_bouteille: str, note: float, id_user: int
         Un dictionnaire avec le résultat de l'opération.
     """
     data: dict = {
-        "auteur": id_user,
+        "auteur": login,  # Use login as the unique identifier
         "note": note,
         "nom_bouteille": nom_bouteille
     }
@@ -347,6 +346,8 @@ def recuperer_archives(config_db: dict, collection: str, query: dict = None) -> 
         "status": 200,
         "archives": rstatus.get("data")
     }
+
+
 
 
 
