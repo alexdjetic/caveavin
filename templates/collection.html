@@ -31,6 +31,7 @@
                 <div class="mt-4 flex justify-between">
                     <a href="/bottle/{{ nom_bouteille }}" class="text-blue-500 hover:underline">Voir Détails</a>
                     <button onclick="showMoveBottlePopup('{{ nom_bouteille }}')" class="text-green-500 hover:underline">Déplacer</button>
+                    <a href="/bottle/update/{{ nom_bouteille }}" class="text-yellow-500 hover:underline">Mettre à jour</a>
                     <a href="/bottle/archive/{{ nom_bouteille }}" class="text-yellow-500 hover:underline">Archiver</a>
                     <a href="/bottle/delete/{{ nom_bouteille }}" class="text-red-500 hover:underline" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette bouteille ?');">
                         Supprimer
@@ -93,103 +94,73 @@
 </div>
 
 <script>
-function showAddBottlePopup() {
-    document.getElementById('addBottlePopup').classList.remove('hidden');
-}
+    function showAddBottlePopup() {
+        document.getElementById('addBottlePopup').classList.remove('hidden');
+    }
 
-function hideAddBottlePopup() {
-    document.getElementById('addBottlePopup').classList.add('hidden');
-}
+    function hideAddBottlePopup() {
+        document.getElementById('addBottlePopup').classList.add('hidden');
+    }
 
-document.getElementById('addBottleForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const formData = new FormData(this);
-    fetch('/bottle/add', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            alert('Bouteille ajoutée avec succès!');
-            hideAddBottlePopup();
-            location.reload(); // Refresh the page to show the new bottle
-        } else {
-            alert('Erreur lors de l\'ajout de la bouteille: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Une erreur s\'est produite lors de l\'ajout de la bouteille.');
-    });
-});
-
-function showMoveBottlePopup(bottleName) {
-    document.getElementById('moveBottlePopup').classList.remove('hidden');
-    document.getElementById('moveBottleName').value = bottleName;
-    // Fetch caves and populate the cave select
-    fetch('/cave/get_caves')
+    document.getElementById('addBottleForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        fetch('/bottle/add', {
+            method: 'POST',
+            body: formData
+        })
         .then(response => response.json())
         .then(data => {
-            const caveSelect = document.getElementById('caveSelect');
-            caveSelect.innerHTML = '<option value="">Sélectionnez une cave</option>';
-            data.caves.forEach(cave => {
-                caveSelect.innerHTML += `<option value="${cave.id}">${cave.name}</option>`;
-            });
+            if (data.status === 'success') {
+                alert('Bouteille ajoutée avec succès!');
+                hideAddBottlePopup();
+                location.reload(); // Refresh the page to show the new bottle
+            } else {
+                alert('Erreur lors de l\'ajout de la bouteille: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Une erreur s\'est produite lors de l\'ajout de la bouteille.');
         });
-}
+    });
 
-function hideMoveBottlePopup() {
-    document.getElementById('moveBottlePopup').classList.add('hidden');
-}
-
-document.getElementById('caveSelect').addEventListener('change', function() {
-    const caveId = this.value;
-    if (caveId) {
-        fetch(`/cave/get_etageres/${caveId}`)
+    function showMoveBottlePopup(bottleName) {
+        document.getElementById('moveBottlePopup').classList.remove('hidden');
+        document.getElementById('moveBottleName').value = bottleName;
+        // Fetch caves and populate the cave select
+        fetch('/cave/get_caves')
             .then(response => response.json())
             .then(data => {
-                const etagereSelect = document.getElementById('etagereSelect');
-                etagereSelect.innerHTML = '<option value="">Sélectionnez une étagère</option>';
-                data.etageres.forEach(etagere => {
-                    etagereSelect.innerHTML += `<option value="${etagere.id}">${etagere.name}</option>`;
+                const caveSelect = document.getElementById('caveSelect');
+                caveSelect.innerHTML = '<option value="">Sélectionnez une cave</option>'; // Reset options
+                data.caves.forEach(cave => {
+                    const option = document.createElement('option');
+                    option.value = cave.nom;
+                    option.textContent = cave.nom;
+                    caveSelect.appendChild(option);
                 });
             });
+        // Fetch shelves and populate the shelf select based on the selected cave
+        document.getElementById('caveSelect').addEventListener('change', function() {
+            const selectedCave = this.value;
+            fetch(`/etagere/get_etageres/${selectedCave}`)
+                .then(response => response.json())
+                .then(data => {
+                    const etagereSelect = document.getElementById('etagereSelect');
+                    etagereSelect.innerHTML = '<option value="">Sélectionnez une étagère</option>'; // Reset options
+                    data.etageres.forEach(etagere => {
+                        const option = document.createElement('option');
+                        option.value = etagere.nom;
+                        option.textContent = etagere.nom;
+                        etagereSelect.appendChild(option);
+                    });
+                });
+        });
     }
-});
 
-document.getElementById('moveBottleForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const formData = new FormData(this);
-    fetch('/bottle/move', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            alert('Bouteille déplacée avec succès!');
-            hideMoveBottlePopup();
-            location.reload(); // Refresh the page to show the updated bottle location
-        } else {
-            alert('Erreur lors du déplacement de la bouteille: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Une erreur s\'est produite lors du déplacement de la bouteille.');
-    });
-});
-
-// Close the popups when clicking outside of them
-window.onclick = function(event) {
-    const addPopup = document.getElementById('addBottlePopup');
-    const movePopup = document.getElementById('moveBottlePopup');
-    if (event.target == addPopup) {
-        hideAddBottlePopup();
-    } else if (event.target == movePopup) {
-        hideMoveBottlePopup();
+    function hideMoveBottlePopup() {
+        document.getElementById('moveBottlePopup').classList.add('hidden');
     }
-}
 </script>
 {% endblock %}

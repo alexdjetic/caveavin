@@ -1,7 +1,6 @@
 from fastapi import FastAPI, Request, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
 import uvicorn
 from route.user_route import router as user_router
 from route.cave_route import router as cave_router
@@ -32,6 +31,16 @@ async def index(request: Request, user_cookies: dict = Depends(get_user_cookies)
         "request": request,
         **user_cookies
     })
+
+
+@app.get("/404", response_class=HTMLResponse)
+async def not_found(request: Request):
+    return templates.TemplateResponse("404.html", {"request": request})
+
+
+@app.exception_handler(404)  # This handles 404 errors
+async def custom_404_handler(request: Request, exc):
+    return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
 
 
 # Main entry point to run the FastAPI app

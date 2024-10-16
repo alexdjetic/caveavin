@@ -4,6 +4,7 @@ from typing import Optional, List, Dict, Any
 from bson import ObjectId
 
 
+
 class Personne(BaseModel):
     """
     A class to represent a person with authentication functionality.
@@ -94,9 +95,10 @@ class Personne(BaseModel):
 
         # Insert the user into the database
         rstatus: dict = connex.insert_data_into_collection(self.collections, data_user)
+
         if rstatus.get("status") != 200:
             return {
-                "message": "Failed to create a new user!",
+                "message": rstatus.get("message"),
                 "status": rstatus.get("status")
             }
 
@@ -129,7 +131,25 @@ class Personne(BaseModel):
 
         return rstatus
 
-    def delete(self, query: dict) -> dict:
+    def update_user_info(self) -> dict:
+        """Updates the user in the database."""
+
+        query: dict = {"login": self.login}
+        update_data = {
+            "nom": self.nom,
+            "prenom": self.prenom,
+            "email": self.email,
+            "perm": self.perm
+        }
+        connex: Connexdb = Connexdb(**self.config_db)
+
+        rstatus: dict = connex.update_data_from_collection(self.collections, query, update_data)
+        if rstatus.get("status") != 200:
+            return rstatus
+
+        return rstatus
+
+    def delete(self) -> dict:
         """Deletes the user from the database."""
         if not self.config_db:
             return {
@@ -138,6 +158,7 @@ class Personne(BaseModel):
             }
 
         connex: Connexdb = Connexdb(**self.config_db)
+        query: dict = {"login": self.login}
         rstatus: dict = connex.delete_data_from_collection(self.collections, query)
         if rstatus.get("status") != 200:
             return {
@@ -145,6 +166,9 @@ class Personne(BaseModel):
                 "status": rstatus.get("status")
             }
 
+        # supprimer les bouteilles qu'utilisateur à aussi A FAIRE
+
+        rstatus: dict = connex.delete_data_from_collection(self.collections, query)
         return rstatus
 
     def get(self) -> dict:
@@ -162,7 +186,8 @@ class Personne(BaseModel):
         if rstatus.get("status") != 200:
             return {
                 "message": "Failed to retrieve users for authentication!",
-                "status": rstatus.get("status")
+                "status": rstatus.get("status"),
+                "data": []
             }
 
         return {

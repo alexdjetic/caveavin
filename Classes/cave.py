@@ -187,7 +187,11 @@ class Cave(BaseModel):
                 return {"message": "La cave n'est pas associée.", "status": 400}
             caves.remove(cave_name)
 
+        print(caves)
         update_status = connex.update_data_from_collection("user", {"login": login_user}, {"caves": caves})
+
+        print(update_status)
+
         return {
             "message": "Mise à jour réussie." if update_status.get("status") == 200
             else "Échec de la mise à jour de l'utilisateur.",

@@ -60,7 +60,7 @@ async def login_post(request: Request, login: str = Form(...), password: str = F
 
 @router.get("/logout")
 async def logout():
-    response = RedirectResponse(url="/login")
+    response = RedirectResponse(url="/user/login")
     for key in ["login", "nom", "prenom", "perm"]:
         response.delete_cookie(key=key)
     return response
@@ -68,9 +68,159 @@ async def logout():
 @router.get("/profil", response_class=HTMLResponse)
 async def profil(request: Request, user_cookies: dict = Depends(get_user_cookies)):
     if not user_cookies["login"]:
-        response = RedirectResponse(url="/login", status_code=302)
+        response = RedirectResponse(url="/user/login", status_code=302)
         return response
     return templates.TemplateResponse("profil.html", {
         "request": request,
         **user_cookies
     })
+
+@router.get("/collection", response_class=HTMLResponse)
+async def collection(request: Request, user_cookies: dict = Depends(get_user_cookies)):
+    if user_cookies["login"] is None:
+        return RedirectResponse(url="/user/login", status_code=302)
+    user = Personne(
+        perm = user_cookies["perm"],
+        login = user_cookies["login"],
+        password = "",
+        nom = user_cookies["nom"],
+        prenom = user_cookies["prenom"],
+        collections="user",
+        config_db = config_db
+    )
+    bottles_response = user.get_bottles()
+    print(bottles_response)
+    return templates.TemplateResponse("collection.html", {
+        "request": request,
+        **user_cookies,
+        "bouteilles": bottles_response["data"]
+    })
+
+@router.get("/delete/{user_login}", response_class=HTMLResponse)
+async def delete(request: Request, user_login: str, user_cookies: dict = Depends(get_user_cookies)):
+    # not working
+    if user_cookies["login"] is None:
+        return RedirectResponse(url="/", status_code=302)
+
+    user: Personne = Personne(
+        login=user_login,
+        config_db=config_db,
+        collections="user"
+    )
+
+    # check user exist first
+    user_data: dict = user.get()
+
+    print(user_data)
+
+    if user_data.get("status") != 200:
+        return {
+            "message": "l'utilisateur n'éxiste pas dans la base de donnée",
+            "status_code": 403
+        }
+
+    # delete from database
+    user.delete()
+
+    # unset all cookie var
+    response = RedirectResponse(url="/user/logout", status_code=302)
+    return response
+
+
+@router.get("/create/", response_class=HTMLResponse)
+async def create(request: Request, user_cookies: dict = Depends(get_user_cookies), error: str = None):
+    return templates.TemplateResponse("create_user.html", {"request": request, "error": error})
+
+
+@router.post("/create/", response_class=HTMLResponse)
+async def create_post(request: Request,
+                     login: str = Form("login"),
+                     password: str = Form("password"),
+                     nom: str = Form("nom"),
+                     prenom: str = Form("prenom"),
+                     perm: str = Form("perm"),
+                     email: str = Form("email"),
+                     user_cookies: dict = Depends(get_user_cookies)):
+    print(type(login))
+    print(type(nom))
+    print(type(perm))
+    print(type(login))
+    print(type(password))
+    print(type(email))
+
+
+    user: Personne = Personne(
+        login=str(login),
+        password=str(password),
+        nom=str(nom),
+        prenom=str(prenom),
+        perm=str(perm),
+        email=str(email),
+        config_db=config_db,
+        collections="user"
+    )
+
+    rstatus: dict = user.create()
+
+    print(rstatus)
+
+    if rstatus.get("status") != 200:
+        error_message = rstatus.get("message", rstatus.get("message"))
+        return templates.TemplateResponse("create_user.html", {"request": request, "error": error_message})
+
+    if user_cookies["login"] is None:
+        response = RedirectResponse(url="/user/login", status_code=302)
+        return response
+
+    response = RedirectResponse(url="/", status_code=302)
+    return response
+
+@router.get("/update", response_class=HTMLResponse)
+async def update(request: Request, user_cookies: dict = Depends(get_user_cookies), error: str = None):
+    return templates.TemplateResponse("update_user.html", {"request": request, "error": error, **user_cookies})
+
+@router.post("/update", response_class=HTMLResponse)
+async def update_post(request: Request,
+                     login: str = Form("login"),
+                     password: str = Form("password"),
+                     nom: str = Form("nom"),
+                     prenom: str = Form("prenom"),
+                     perm: str = Form("perm"),
+                     email: str = Form("email"),
+                     user_cookies: dict = Depends(get_user_cookies)):
+
+    if user_cookies["login"] is None:
+        response = RedirectResponse(url="/user/login", status_code=302)
+        return response
+
+    user: Personne = Personne(
+        login=str(login),
+        nom=str(nom),
+        prenom=str(prenom),
+        perm=str(perm),
+        email=str(email),
+        config_db=config_db,
+        collections="user"
+    )
+
+    if password:
+        user.password = password
+
+    rstatus: dict = user.update_user_info()
+
+    print(rstatus)
+
+    cookie_options = {
+        "httponly": True,
+        "samesite": 'Lax',
+        "expires": 3600,
+        "secure": request.url.scheme == "https"
+    }
+
+    # update cookie
+    response = RedirectResponse(url="/user/profil", status_code=302)
+    response.set_cookie(key="nom", value=nom, **cookie_options)
+    response.set_cookie(key="prenom", value=prenom, **cookie_options)
+    response.set_cookie(key="perm", value=perm, **cookie_options)
+    response.set_cookie(key="email", value=email, **cookie_options)
+    return response

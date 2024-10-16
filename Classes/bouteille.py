@@ -224,6 +224,7 @@ class Bouteille(BaseModel):
             return {
                 "message": "Bouteille non trouvée.",
                 "status": 404,
+                "data": []
             }
 
         # Assuming the bottle is the first item in the result
@@ -358,6 +359,9 @@ class Bouteille(BaseModel):
             "numbers": self.numbers
         }
         connex: Connexdb = Connexdb(**self.config_db)
+
+
+
         create_result: dict = connex.insert_data_into_collection(self.collections, bottle_data)
 
         if create_result.get("status") != 200:
@@ -463,6 +467,29 @@ class Bouteille(BaseModel):
             "status": 200,
         }
 
+    def update(self, data: dict) -> dict:
+        if not self.config_db:
+            return {
+                "message": "Donnez la configuration pour la base de données MongoDB",
+                "status": 500,
+            }
+
+        connex: Connexdb = Connexdb(**self.config_db)
+        update_query = {"nom": self.nom}
+        update_result = connex.update_data_from_collection(self.collections, update_query, {"$set": data})
+
+        print(update_result)
+
+        if update_result.get("status") != 200:
+            return {
+                "message": "Échec de la mise à jour du nombre de bouteilles.",
+                "status": update_result.get("status"),
+            }
+
+        return {
+            "message": "Bouteille existante mise à jour avec succès.",
+            "status": 200,
+        }
 
 
 if __name__ == "__main__":

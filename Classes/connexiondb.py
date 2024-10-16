@@ -144,7 +144,7 @@ class Connexdb:
     def update_data_from_collection(self, collection_name: str, query: dict, data: dict) -> dict:
         try:
             collection = self.db[collection_name]
-            result = collection.update_one(query, data)
+            result = collection.update_one(query, {"$set": data})
             
             if result.modified_count == 0:
                 return {"status": 404, "message": "No document found to update"}

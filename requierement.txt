@@ -1,6 +1,7 @@
 fastapi
 pydantic
-unicorn
+pydantic_core
+uvicorn
 pymongo
 email_validator
 jinja2

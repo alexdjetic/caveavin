@@ -57,7 +57,7 @@ async def get_etageres(cave_id: str, user_cookies: dict = Depends(get_user_cooki
     if user_cookies["login"] is None:
         return JSONResponse(content={"status": "error", "message": "User not logged in"}, status_code=401)
 
-    cave = Cave(id=cave_id, config_db=config_db)
+    cave: Cave = Cave(id=cave_id, config_db=config_db)
     etageres = cave.get_etageres()
     return JSONResponse(content={"etageres": etageres})
 
@@ -74,12 +74,12 @@ async def add_cave_form(request: Request, user_cookies: dict = Depends(get_user_
 async def add_cave(
     request: Request,
     user_cookies: dict = Depends(get_user_cookies),
-    cave_name: str = Form(...),
-    nb_emplacement: int = Form(...)
+    cave_name: str = Form("cave_name"),
+    nb_emplacement: int = Form("nb_emplacement")
 ):
     if user_cookies["login"] is None:
         return RedirectResponse(url="/user/login", status_code=302)
-    cave = Cave(config_db=config_db, nom=cave_name, nb_emplacement=nb_emplacement)
+    cave: Cave = Cave(config_db=config_db, nom=cave_name, nb_emplacement=nb_emplacement)
     result = cave.create_cave(user_cookies["login"])
     if result["status"] == 200:
         return RedirectResponse(url="/cave", status_code=302)
@@ -94,7 +94,6 @@ async def add_cave(
 async def delete_cave(cave_name: str, user_cookies: dict = Depends(get_user_cookies)):
     if user_cookies["login"] is None:
         return RedirectResponse(url="/user/login", status_code=302)
-    cave = Cave(config_db=config_db, nom=cave_name)
+    cave: Cave = Cave(config_db=config_db, nom=cave_name)
     result = cave.delete_cave(user_cookies["login"])
     return RedirectResponse(url="/cave", status_code=302)
-
