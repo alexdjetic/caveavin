@@ -79,6 +79,7 @@ async def profil(request: Request, user_cookies: dict = Depends(get_user_cookies
 async def collection(request: Request, user_cookies: dict = Depends(get_user_cookies)):
     if user_cookies["login"] is None:
         return RedirectResponse(url="/user/login", status_code=302)
+
     user = Personne(
         perm = user_cookies["perm"],
         login = user_cookies["login"],
@@ -88,8 +89,11 @@ async def collection(request: Request, user_cookies: dict = Depends(get_user_coo
         collections="user",
         config_db = config_db
     )
+
     bottles_response = user.get_bottles()
+
     print(bottles_response)
+
     return templates.TemplateResponse("collection.html", {
         "request": request,
         **user_cookies,

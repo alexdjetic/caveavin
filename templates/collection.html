@@ -102,6 +102,14 @@
         document.getElementById('addBottlePopup').classList.add('hidden');
     }
 
+    // Close the popup when clicking outside of it
+    document.getElementById('addBottlePopup').addEventListener('click', function(event) {
+        // Check if the click is on the overlay (background)
+        if (event.target === this) {
+            hideAddBottlePopup();
+        }
+    });
+
     document.getElementById('addBottleForm').addEventListener('submit', function(e) {
         e.preventDefault();
         const formData = new FormData(this);
@@ -113,7 +121,7 @@
         .then(data => {
             if (data.status === 'success') {
                 alert('Bouteille ajoutée avec succès!');
-                hideAddBottlePopup();
+                hideAddBottlePopup(); // Ensure this is called
                 location.reload(); // Refresh the page to show the new bottle
             } else {
                 alert('Erreur lors de l\'ajout de la bouteille: ' + data.message);

@@ -11,11 +11,11 @@ templates = Jinja2Templates(directory="templates")
 async def add_bouteille(
     request: Request,
     user_cookies: dict = Depends(get_user_cookies),
-    nom: str = Form(...),
-    type: str = Form(...),
-    annee: int = Form(...),
-    region: str = Form(...),
-    prix: float = Form(...)
+    nom: str = Form("nom"),
+    type: str = Form("type"),
+    annee: int = Form("annee"),
+    region: str = Form("region"),
+    prix: float = Form("prix")
 ):
     if not user_cookies["login"]:
         raise HTTPException(status_code=401, detail="User not logged in")
@@ -39,7 +39,10 @@ async def add_bouteille(
         config_db=config_db
     )
 
-    rstatus: dict = bouteille.create_bouteille()
+    # Create the bottle
+    rstatus: dict = bouteille.create()
+
+    print(rstatus)
 
     if rstatus.get("status") != 200:
         return {
@@ -47,8 +50,10 @@ async def add_bouteille(
             "status": rstatus.get("status")
         }
 
-    # ajout de la bouteille dans l'étagère
-    result = user.add_bottle(bouteille.nom)
+    # Add the bottle to the user's reserved bottles
+    result = user.add_bottle(nom)
+
+    print(result)
 
     if result.get("status") == 200:
         return JSONResponse(content={"status": "success", "message": "Bottle added successfully"})

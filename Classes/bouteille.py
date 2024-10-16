@@ -319,26 +319,21 @@ class Bouteille(BaseModel):
         connex: Connexdb = Connexdb(**self.config_db)
 
         # Check if the bottle already exists
-        existing_bottle_result = self.exist(connex)
+        existing_bottle_result = self.exist()
 
         if existing_bottle_result.get("status") != 200:
             return existing_bottle_result  # Return error from exist method
 
         if existing_bottle_result['data']:
             # Bottle exists, increment the number of bottles
-            return self.increment_bouteille(connex, existing_bottle_result['data'][0])
+            return self.increment_bouteille(existing_bottle_result['data'][0])
 
         # Bottle does not exist, create a new entry
-        return self.create_bouteille(connex)
+        return self.create_bouteille()  # No need to pass connex here
 
     def create_bouteille(self) -> dict:
         """
         Creates a new bottle in the database.
-
-        Parameters
-        ----------
-        connex : Connexdb
-            The database connection instance.
 
         Returns
         -------
@@ -358,10 +353,11 @@ class Bouteille(BaseModel):
             "num_etagere": self.num_etagere,
             "numbers": self.numbers
         }
+        
+        # Create an instance of Connexdb using the config_db
         connex: Connexdb = Connexdb(**self.config_db)
 
-
-
+        # Insert the data into the collection
         create_result: dict = connex.insert_data_into_collection(self.collections, bottle_data)
 
         if create_result.get("status") != 200:
@@ -372,10 +368,10 @@ class Bouteille(BaseModel):
 
         return {
             "message": "Bouteille créée avec succès.",
-            "status": 201,
+            "status": 200,
         }
 
-    def exist(self, connex: Connexdb) -> dict:
+    def exist(self) -> dict:
         """
         Checks if the bottle exists in the database.
 
@@ -389,6 +385,7 @@ class Bouteille(BaseModel):
         dict
             A dictionary containing the existence check result.
         """
+        connex: Connexdb = Connexdb(**self.config_db)
         query = {"nom": self.nom}
         existing_bottle_result = connex.get_data_from_collection(self.collections, query)
 
@@ -400,14 +397,12 @@ class Bouteille(BaseModel):
 
         return existing_bottle_result
 
-    def increment_bouteille(self, connex: Connexdb, existing_bottle: dict) -> dict:
+    def increment_bouteille(self, existing_bottle: dict) -> dict:
         """
         Increments the numbers field of an existing bottle.
 
         Parameters
         ----------
-        connex : Connexdb
-            The database connection instance.
         existing_bottle : dict
             The existing bottle data.
 
@@ -416,17 +411,18 @@ class Bouteille(BaseModel):
         dict
             A dictionary containing the operation result.
         """
+        connex: Connexdb = Connexdb(**self.config_db)
         self.numbers = existing_bottle.get("numbers", 0) + 1
 
         # Update the number of bottles
         update_query = {"_id": existing_bottle["_id"]}
-        update_data = {"$set": {"numbers": self.numbers}}
+        update_data = {"numbers": self.numbers}
 
         update_result = connex.update_data_from_collection(self.collections, update_query, update_data)
 
         if update_result.get("status") != 200:
             return {
-                "message": "Échec de la mise à jour du nombre de bouteilles.",
+                "message": update_result.get("message"),
                 "status": update_result.get("status"),
             }
 
@@ -531,3 +527,5 @@ if __name__ == "__main__":
     # Consulter les détails de la bouteille
     # details = bouteille.consulter()
     # print(details)
+
+

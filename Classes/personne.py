@@ -245,6 +245,8 @@ class Personne(BaseModel):
         # Fetch user data by login
         user_data_result = connex.get_data_from_collection(self.collections, {"login": self.login})
 
+        print(user_data_result)
+
         if user_data_result.get("status") != 200 or not user_data_result.get("data"):
             return {
                 "status": 401,
@@ -347,25 +349,36 @@ class Personne(BaseModel):
 
         connex: Connexdb = Connexdb(**self.config_db)
 
-        # Fetch the bottle information
-        bottle_info = connex.get_data_from_collection("bouteille", {"nom": bottle_name})
-        if bottle_info.get("status") != 200 or not bottle_info.get("data"):
+        # Fetch the current user's data to get the existing bouteille_reserver list
+        user_data_result = connex.get_data_from_collection(self.collections, {"login": self.login})
+
+        if user_data_result.get("status") != 200 or not user_data_result.get("data"):
             return {
-                "status": 404,
-                "message": "Bottle not found"
+                "status": 401,
+                "message": "User not found or invalid login."
             }
 
-        # Update the user's bouteille_reserver list
+        # Get the current bouteille_reserver list
+        user_data = user_data_result.get("data")[0]
+        current_bottles = user_data.get("bouteille_reserver", [])
+
+        # Append the new bottle name to the list
+        if bottle_name not in current_bottles:
+            current_bottles.append(bottle_name)
+
+        # Update the user's bouteille_reserver list in the database
         update_result = connex.update_data_from_collection(
             self.collections,
             {"login": self.login},
-            {"$addToSet": {"bouteille_reserver": bottle_name}}
+            {"bouteille_reserver": current_bottles}
         )
+
+        print(update_result)
 
         if update_result.get("status") != 200:
             return {
                 "status": 500,
-                "message": "Failed to add bottle to user's collection"
+                "message": update_result.get("message")
             }
 
         return {
@@ -383,8 +396,8 @@ if __name__ == '__main__':
     }
 
     user = Personne(
-        login="test",
-        password="test",
+        login="alexandre",
+        password="wm7ze*2b",
         config_db=config_db,
         collections="user"
     )
@@ -393,16 +406,20 @@ if __name__ == '__main__':
     print("Before update:")
     print(user.get())
 
-    print("\nUpdating caves:")
-    print(user.update({"caves": ["cave2"]}))
+    # print("\nUpdating caves:")
+    # print(user.update({"caves": ["cave2"]}))
 
-    print("\nAfter update:")
-    print(user.get())
+    #print("\nAfter update:")
+    # print(user.get())
 
     # Test add_bottle method
-    print("\nAdding a bottle:")
-    bottle_id = "test"
-    print(user.add_bottle(bottle_id))
+    # print("\nAdding a bottle:")
+    # bottle_id = "test"
+    # print(user.add_bottle(bottle_id))
 
-    print("\nAfter adding bottle:")
-    print(user.get())
+    # print("\nAfter adding bottle:")
+    # print(user.get())
+
+
+
+
