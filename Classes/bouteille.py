@@ -136,70 +136,6 @@ class Bouteille(BaseModel):
             "status": 200,
         }
 
-    def get_commentaires(self) -> dict:
-        """
-        Fetches comments about the wine from the database.
-
-        Returns
-        -------
-        dict
-            A dictionary containing the fetched comments.
-        """
-        if not self.config_db:
-            return {
-                "message": "Donnez la configuration pour la base de données MongoDB",
-                "status": 500,
-            }
-
-        connex: Connexdb = Connexdb(**self.config_db)
-
-        # Query to get comments by name
-        query = {"nom": self.nom}
-        commentaires_result = connex.get_data_from_collection("commentaire", query)
-
-        if commentaires_result.get("status") != 200:
-            return {
-                "message": "Échec de la récupération des commentaires.",
-                "status": commentaires_result.get("status"),
-            }
-
-        return {
-            "status": 200,
-            "data": commentaires_result.get("data", [])
-        }
-
-    def get_notes(self) -> dict:
-        """
-        Fetches ratings for the wine from the database.
-
-        Returns
-        -------
-        dict
-            A dictionary containing the fetched ratings.
-        """
-        if not self.config_db:
-            return {
-                "message": "Donnez la configuration pour la base de données MongoDB",
-                "status": 500,
-            }
-
-        connex: Connexdb = Connexdb(**self.config_db)
-
-        # Query to get ratings by name
-        query = {"nom": self.nom}
-        commentaires_result = connex.get_data_from_collection("note", query)
-
-        if commentaires_result.get("status") != 200:
-            return {
-                "message": "Échec de la récupération des notes.",
-                "status": commentaires_result.get("status"),
-            }
-
-        return {
-            "status": 200,
-            "data": commentaires_result.get("data", [])
-        }
-
     def get_all_information(self) -> dict:
         """
         Retrieves all information about the bottle, including its details, comments, and ratings.
@@ -207,8 +143,8 @@ class Bouteille(BaseModel):
         print(f"Fetching information for bottle: {self.nom}")  # Debug print
 
         # Fetch the bottle information from the database
-        bottle_query = {"nom": self.nom}
-        bottle_info_result = effectuer_operation_db(self.config_db, "bouteille", "get", query=bottle_query)
+        bottle_query: dict = {"nom": self.nom}
+        bottle_info_result: dict = effectuer_operation_db(self.config_db, "bouteille", "get", query=bottle_query)
 
         print(f"Bottle info result: {bottle_info_result}")  # Debug print
 
@@ -222,13 +158,34 @@ class Bouteille(BaseModel):
         # Get the bottle information
         bottle_info = bottle_info_result["data"][0]
 
-        # Fetch comments associated with the bottle
-        comments_result = effectuer_operation_db(self.config_db, "commentaire", "get", {"nom_bouteille": self.nom})
-        bottle_info["commentaires"] = comments_result.get("data", [])
+        # Fetch all comments associated with the bottle
+        comments_result = effectuer_operation_db(self.config_db, "commentaire", "get", {})
+        tmp_commentaires = []
 
-        # Fetch ratings associated with the bottle
-        ratings_result = effectuer_operation_db(self.config_db, "note", "get", {"nom_bouteille": self.nom})
-        bottle_info["notes"] = ratings_result.get("data", [])
+        # Filter comments based on the bottle name
+        for comment in comments_result.get("data", []):
+            if comment.get("nom_bouteille") == self.nom:
+                tmp_commentaires.append(comment)
+
+        bottle_info["commentaires"] = tmp_commentaires
+
+        # Fetch all ratings associated with the bottle
+        ratings_result = effectuer_operation_db(self.config_db, "note", "get", {})
+        tmp_notes = []
+
+        # Filter ratings based on the bottle name
+        for note in ratings_result.get("data", []):
+            if note.get("nom_bouteille") == self.nom:
+                tmp_notes.append(note)
+
+        bottle_info["notes"] = tmp_notes
+
+        # Calculate the average rating
+        average_result = self.moyenne()
+        if average_result.get("status") == 200:
+            bottle_info["moyen"] = average_result["average"]
+        else:
+            bottle_info["moyen"] = None  # Handle case where no average could be calculated
 
         print(f"Final bottle information: {bottle_info}")  # Debug print
 
@@ -256,8 +213,8 @@ class Bouteille(BaseModel):
         connex: Connexdb = Connexdb(**self.config_db)
 
         # Query to filter ratings by name
-        query = {"nom_bouteille": self.nom}  # Ensure the query matches the field in the database
-        notes_result = connex.get_data_from_collection("note", query)
+        query: dict = {"nom_bouteille": self.nom}  # Ensure the query matches the field in the database
+        notes_result: dict = connex.get_data_from_collection("note", query)
 
         if notes_result.get("status") != 200:
             return {
@@ -266,7 +223,7 @@ class Bouteille(BaseModel):
             }
 
         # Extract the values from the retrieved ratings
-        notes = [note['value'] for note in notes_result['data'] if 'value' in note]  # Ensure 'value' exists
+        notes = [note['note'] for note in notes_result['data'] if 'note' in note]  # Ensure 'note' exists
 
         if not notes:
             return {
@@ -455,7 +412,7 @@ class Bouteille(BaseModel):
 
         connex: Connexdb = Connexdb(**self.config_db)
         update_query = {"nom": self.nom}
-        update_result = connex.update_data_from_collection(self.collections, update_query, {"$set": data})
+        update_result = connex.update_data_from_collection(self.collections, update_query, data)
 
         print(update_result)
 
@@ -510,6 +467,11 @@ if __name__ == "__main__":
     # Consulter les détails de la bouteille
     # details = bouteille.consulter()
     # print(details)
+
+
+
+
+
 
 
 
