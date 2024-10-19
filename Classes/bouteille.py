@@ -427,6 +427,85 @@ class Bouteille(BaseModel):
             "status": 200,
         }
 
+    def move(self, nom_cave: str, num_etagere: int) -> dict:
+        """
+        Moves the bottle to a specified cave and shelf (etagere).
+
+        Parameters
+        ----------
+        nom_cave : str
+            The name of the cave to move the bottle to.
+        num_etagere : int
+            The number of the shelf (etagere) to move the bottle to.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the operation result and status.
+        """
+        if not self.config_db:
+            return {
+                "message": "Configuration de la base de données requise.",
+                "status": 500,
+            }
+
+        connex = Connexdb(**self.config_db)
+
+        # Check if the cave exists and has available space
+        cave_result = connex.get_data_from_collection("caves", {"nom": nom_cave})
+        if cave_result.get("status") != 200 or not cave_result['data']:
+            return {
+                "message": "Cave non trouvée.",
+                "status": 404,
+            }
+
+        cave = cave_result['data'][0]
+        if cave['nb_emplacement'] <= 0:
+            return {
+                "message": "Pas de place disponible dans la cave.",
+                "status": 400,
+            }
+
+        # Check if the etagere exists and has available space
+        etagere_result = connex.get_data_from_collection("etagere", {"num": num_etagere})
+        if etagere_result.get("status") != 200 or not etagere_result['data']:
+            return {
+                "message": "Étagère non trouvée.",
+                "status": 404,
+            }
+
+        etagere = etagere_result['data'][0]
+        if etagere['nb_place'] <= 0:
+            return {
+                "message": "Pas de place disponible sur l'étagère.",
+                "status": 400,
+            }
+
+        # Update the bottle's cave and etagere fields
+        self.cave = nom_cave
+        self.num_etagere = num_etagere
+
+        # Update the bottle in the database
+        update_result = self.update({"nom": self.nom}, {"cave": self.cave, "num_etagere": self.num_etagere})
+        if update_result.get("status") != 200:
+            return {
+                "message": "Échec de la mise à jour de la bouteille.",
+                "status": update_result.get("status"),
+            }
+
+        # Decrease the available space in the cave and etagere
+        cave['nb_emplacement'] -= 1
+        etagere['nb_place'] -= 1
+
+        # Update the cave and etagere in the database
+        connex.update_data_from_collection("caves", {"nom": nom_cave}, {"nb_emplacement": cave['nb_emplacement']})
+        connex.update_data_from_collection("etagere", {"num": num_etagere}, {"nb_place": etagere['nb_place']})
+
+        return {
+            "message": "Bouteille déplacée avec succès.",
+            "status": 200,
+        }
+
 
 if __name__ == "__main__":
     """
@@ -467,14 +546,3 @@ if __name__ == "__main__":
     # Consulter les détails de la bouteille
     # details = bouteille.consulter()
     # print(details)
-
-
-
-
-
-
-
-
-
-
-

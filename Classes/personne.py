@@ -303,9 +303,6 @@ class Personne(BaseModel):
         user_data = user_data_result.get("data")[0]
         user_caves = user_data.get("caves", [])
 
-        # Print for debugging
-        print(f"User caves: {user_caves}")
-
         # Check if the user has no caves available
         if not user_caves:
             return {

@@ -4,17 +4,7 @@ from fastapi.templating import Jinja2Templates
 from Classes.personne import Personne
 from .dependencies import (
     get_user_cookies, 
-    config_db, 
-    effectuer_operation_db,
-    ajouter_commentaire,
-    supprimer_commentaire,
-    mettre_a_jour_commentaire,
-    recuperer_commentaire,
-    ajouter_notes,
-    supprimer_notes,
-    mettre_a_jour_notes,
-    recuperer_notes,
-    recuperer_archives
+    config_db
 )
 
 router = APIRouter()
@@ -36,7 +26,7 @@ async def login_post(request: Request, login: str = Form(...), password: str = F
         collections="user",
         config_db=config_db
     )
-    auth_result = user.auth()
+    auth_result: dict = user.auth()
 
     if auth_result.get("status") == 200:
         user_data = auth_result.get("user_data", {})
@@ -92,8 +82,6 @@ async def collection(request: Request, user_cookies: dict = Depends(get_user_coo
 
     bottles_response = user.get_bottles()
 
-    print(bottles_response)
-
     return templates.TemplateResponse("collection.html", {
         "request": request,
         **user_cookies,
@@ -114,8 +102,6 @@ async def delete(request: Request, user_login: str, user_cookies: dict = Depends
 
     # check user exist first
     user_data: dict = user.get()
-
-    print(user_data)
 
     if user_data.get("status") != 200:
         return {
