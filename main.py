@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Depends
+from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 import uvicorn
@@ -40,7 +40,7 @@ async def index(request: Request, user_cookies: dict = Depends(get_user_cookies)
 
 @app.get("/error", response_class=HTMLResponse)
 async def not_found(request: Request):
-    print(f"<!> 404 error for request: {request.method} {request.url} <!>")
+    print(f"<!> 404 error for request: {request.method} {request.url}")
     return templates.TemplateResponse("error.html", {"request": request})
 
 
@@ -49,6 +49,24 @@ async def custom_404_handler(request: Request, exc):
     print(f"<!> 404 error for request: {request.method} {request.url} <!>")
     return templates.TemplateResponse("error.html", {"request": request}, status_code=404)
 
+# Define the default HTTP exception handler
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return templates.TemplateResponse("error.html", {"request": request}, status_code=exc.status_code)
+
+# Custom error handler for 403 Forbidden
+@app.exception_handler(HTTPException)
+async def custom_http_exception_handler(request: Request, exc: HTTPException):
+    if exc.status_code == 403:
+        return templates.TemplateResponse("notallow.html", {"request": request}, status_code=403)
+    # For other HTTP exceptions, use the default handler
+    return await http_exception_handler(request, exc)
+
+# Example route that raises a 403 error
+@app.get("/restricted")
+async def restricted_route():
+    raise HTTPException(status_code=403, detail="Access forbidden")
+
+# Other routes and application logic...
 
 # Main entry point to run the FastAPI app
 if __name__ == "__main__":

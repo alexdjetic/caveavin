@@ -35,6 +35,8 @@ class Cave(BaseModel):
         Crée une nouvelle cave et associe l'utilisateur.
     delete_cave(login_user: str) -> dict
         Supprime la cave de la base de données.
+    get_etageres() -> dict
+        Récupère les étagères associées à la cave depuis la base de données.
     update_user_caves(login_user: str, cave_name: str, connex: Connexdb, add: bool) -> dict
         Met à jour l'utilisateur pour l'association de la cave.
     """
@@ -49,21 +51,29 @@ class Cave(BaseModel):
         """Récupère les étagères associées à la cave depuis la base de données."""
         if not self.config_db:
             return {"message": "Configuration de la base de données requise.", "status": 500}
-        
-        current_cave_data = self.get_cave()
-        
-        if current_cave_data.get("status") != 200:
-            return {"message": "Échec de la récupération des données de la cave.", "status": 500}
 
         connex = Connexdb(**self.config_db)
 
         # Query to get all etageres related to this cave
-        etageres_result = connex.get_data_from_collection("etagere", {"cave": current_cave_data['data']['nom']})
+        etageres_result = connex.get_data_from_collection("etagere", {"cave": self.nom})
+
+        print("Etageres Result:", etageres_result)  # Debug print
 
         if etageres_result.get("status") != 200:
             return {"message": "Étagères non trouvées.", "status": 404}
 
-        return {"status": 200, "data": etageres_result['data']}
+        # Prepare the etageres data
+        etageres_data = []
+        for etagere in etageres_result['data']:
+            etageres_data.append({
+                "num_etagere": etagere.get("num"),
+                "data": etagere  # Use the etagere data directly
+            })
+
+        return {
+            "status": 200,
+            "etageres_data": etageres_data  # Include the list of etageres
+        }
 
     def add_etagere(self, etagere: Etagere) -> dict:
         """Ajoute une étagère à la cave et met à jour le nombre d'emplacements."""
@@ -73,18 +83,27 @@ class Cave(BaseModel):
         self.etageres.append(etagere.num)  # Add the etagere number to the cave's etageres
         self.nb_emplacement += etagere.nb_place  # Update total available places
 
+        # Create the etagere in the database
+        etagere_creation_result: dict = etagere.create_etageres()  # Ensure this method is defined in Etagere
+        if etagere_creation_result.get("status") != 200:
+            return {
+                "message": "Échec de la création de l'étagère dans la base de données.",
+                "status": etagere_creation_result.get("status", 500)
+            }
+
         # Update the cave in the database
         rstatus: dict = self.update_cave()  
-
         if rstatus.get("status") != 200:
             return {
                 "message": "ajout de l'étagère à la cave a échoué !",
                 "status": 500
             }
 
-        # Create the etagere in the database
-        etagere_creation_result: dict = etagere.create_etageres()  
-        return etagere_creation_result
+        return {
+            "message": "Étagère ajoutée avec succès.",
+            "status": 200,
+            "num_etagere": etagere.num  # Include only the num_etagere
+        }
 
     def del_etagere(self, num_eta: int) -> dict:
         """Enlève une étagère de la cave et met à jour le nombre d'emplacements."""
@@ -95,6 +114,15 @@ class Cave(BaseModel):
         etagere: Etagere = Etagere(num=num_eta, cave=self.nom, config_db=self.config_db)  # Create an instance to access its properties
         self.nb_emplacement -= etagere.nb_place  # Update total available places
         self.etageres.remove(num_eta)  # Remove the etagere number from the cave's etageres
+
+        # Update the cave in the database
+        rstatus: dict = self.update_cave()  
+        if rstatus.get("status") != 200:
+            return {
+                "message": "Échec de la mise à jour de la cave après suppression de l'étagère.",
+                "status": 500
+            }
+
         return {"message": "Étagère supprimée avec succès.", "status": 200}
 
     def update_cave(self) -> dict:
@@ -102,20 +130,15 @@ class Cave(BaseModel):
         if not self.config_db:
             return {"message": "Configuration de la base de données requise.", "status": 500}
 
-        # Fetch the current state of the cave from the database
-        current_cave_data = self.get_cave()
-        
-        if current_cave_data.get("status") != 200:
-            return {"message": "Échec de la récupération des données de la cave.", "status": 500}
-
-        current_cave_data["etagere"] = self.etageres
-
-        # Update the cave in the database
         connex: Connexdb = Connexdb(**self.config_db)
         update_status: dict = connex.update_data_from_collection(
             self.collections,
             {"nom": self.nom},
-            current_cave_data
+            {
+                "nom": self.nom,
+                "nb_emplacement": self.nb_emplacement,
+                "etageres": self.etageres
+            }
         )
 
         return {
@@ -134,7 +157,23 @@ class Cave(BaseModel):
         if cave_result.get("status") != 200 or not cave_result['data']:
             return {"message": "Cave non trouvée.", "status": 404}
 
-        return {"status": 200, "data": cave_result['data'][0]}
+        # Extract the cave data
+        cave_data = cave_result['data'][0]
+        
+        # Get the etageres data
+        etageres_response = self.get_etageres()
+
+        # Return the cave data in the desired format
+        return {
+            "status": 200,
+            "data": {
+                "_id": str(cave_data['_id']),  # Convert ObjectId to string
+                "nom": cave_data['nom'],
+                "nb_emplacement": cave_data['nb_emplacement'],
+                "etageres": cave_data.get('etagere', []),  # Ensure this only contains the shelf numbers
+                "etagere_data": etageres_response.get("etageres_data", [])  # Add the etageres data
+            }
+        }
 
     def create_cave(self, login_user: str) -> dict:
         """Crée une nouvelle cave et associe l'utilisateur."""

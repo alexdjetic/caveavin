@@ -37,12 +37,12 @@
             <div class="mt-6">
                 <h2 class="text-xl font-semibold mb-2">Étagères</h2>
                 <div class="space-y-4" id="etagere-list">
-                    {% for etagere in data.etageres %}
-                        <div class="bg-gray-100 p-4 rounded-md shadow-md" id="etagere-{{ etagere.num }}">
-                            <p class="text-gray-800"><strong>Étagère {{ etagere.num }}:</strong></p>
-                            <p class="text-gray-600"><strong>Places disponibles:</strong> {{ etagere.nb_place }}</p>
-                            <p class="text-gray-600"><strong>Nombre de bouteilles:</strong> {{ etagere.nb_bouteille }}</p>
-                            <button onclick="showManageEtagerePopup('{{ etagere.num }}', '{{ data.nom }}')" class="bg-blue-500 text-white px-2 py-1 rounded-md hover:bg-blue-600">
+                    {% for etagere in data.etagere_data %}
+                        <div class="bg-gray-100 p-4 rounded-md shadow-md" id="etagere-{{ etagere.num_etagere }}">
+                            <p class="text-gray-800"><strong>Étagère {{ etagere.num_etagere }}:</strong></p>
+                            <p class="text-gray-600"><strong>Places disponibles:</strong> {{ etagere.data.nb_place }}</p>
+                            <p class="text-gray-600"><strong>Nombre de bouteilles:</strong> {{ etagere.data.nb_bouteille }}</p>
+                            <button onclick="showManageEtagerePopup('{{ etagere.num_etagere }}', '{{ data.nom }}')" class="bg-blue-500 text-white px-2 py-1 rounded-md hover:bg-blue-600">
                                 Gérer Étagère
                             </button>
                         </div>

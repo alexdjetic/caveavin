@@ -13,7 +13,6 @@ templates = Jinja2Templates(directory="templates")
 # Define the add cave route before the dynamic route
 @router.get("/add-cave", response_class=HTMLResponse)
 async def add_cave_form_html(request: Request, user_cookies: dict = Depends(get_user_cookies)):
-    print("\n<!> add_cave_get route accessed <!>\n")
 
     if user_cookies["login"] is None:
         return RedirectResponse(url="/user/login", status_code=302)
@@ -44,44 +43,6 @@ async def cave_index(request: Request, user_cookies: dict = Depends(get_user_coo
         **user_cookies,
         "caves": caves
     })
-
-
-@router.get("/{nom_cave}", response_class=HTMLResponse)
-async def cave_details(request: Request, nom_cave: str, user_cookies: dict = Depends(get_user_cookies)):
-    print(f"\n<!> cave_details route accessed for {nom_cave} <!>\n")
-
-    if user_cookies["login"] is None:
-        return RedirectResponse(url="/user/login", status_code=302)
-    
-    # Create an instance of the Cave class
-    cave_instance: Cave = Cave(
-        nom=nom_cave,
-        config_db=config_db
-    )
-
-    # Retrieve cave details from the database
-    cave_info = cave_instance.get_cave()  # Assuming this method retrieves the cave details
-    print(f"<!> get_cave method called <!>")  # Debugging line
-
-    if cave_info.get("status") != 200:
-        return templates.TemplateResponse("error.html", {"request": request, "message": "Cave non trouvée."})
-
-    # Prepare the data for rendering
-    cave_data = cave_info['data']
-    
-    # Fetch the shelves (etagere) associated with the cave
-    etageres_info = cave_instance.get_etageres() 
-
-    print(f"information étagère: {etageres_info}")
-
-    if etageres_info.get("status") != 200:
-        return templates.TemplateResponse("error.html", {"request": request, "message": "Étagères non trouvées."})
-
-    # Combine cave data and shelves data
-    cave_data['etageres'] = etageres_info['data']
-
-    # Render the cave details template
-    return templates.TemplateResponse("cave_details.html", {"request": request, "data": cave_data,**user_cookies})
 
 @router.post("/add_etagere")
 async def add_etagere(
@@ -137,7 +98,6 @@ async def add_cave(
     cave_name: str = Form("cave_name"),
     nb_emplacement: int = Form("nb_emplacement")
 ):
-    print("\n<!> add_cave_post route accessed <!>\n")
 
     if user_cookies["login"] is None:
         return RedirectResponse(url="/user/login", status_code=302)
@@ -159,3 +119,28 @@ async def delete_cave(cave_name: str, user_cookies: dict = Depends(get_user_cook
     cave: Cave = Cave(config_db=config_db, nom=cave_name)
     result = cave.delete_cave(user_cookies["login"])
     return RedirectResponse(url="/cave", status_code=302)
+
+@router.get("/{nom_cave}", response_class=HTMLResponse)
+async def cave_details(request: Request, nom_cave: str, user_cookies: dict = Depends(get_user_cookies)):
+    if user_cookies["login"] is None:
+        return RedirectResponse(url="/user/login", status_code=302)
+    
+    # Create an instance of the Cave class
+    cave: Cave = Cave(
+        nom=nom_cave,
+        config_db=config_db
+    )
+
+    # Retrieve cave details from the database
+    cave_info = cave.get_cave() # Assuming this method retrieves the cave details
+
+    if cave_info.get("status") != 200:
+        return templates.TemplateResponse("error.html", {"request": request, "message": "Cave non trouvée."})
+
+    # Prepare the data for rendering
+    cave_data = cave_info['data']
+    
+    print(cave_data)
+
+    # Render the cave details template
+    return templates.TemplateResponse("cave_details.html", {"request": request, "data": cave_data, **user_cookies})
