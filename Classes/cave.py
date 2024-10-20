@@ -14,7 +14,7 @@ class Cave(BaseModel):
         Nom de la cave.
     nb_emplacement : int
         Nombre d'emplacements disponibles (total des places sur toutes les étagères).
-    etageres : list[int]
+    etageres : list[Etagere]
         Étagères de la cave, indexées par leur numéro.
     config_db : dict
         Configuration de la base de données.
@@ -25,7 +25,7 @@ class Cave(BaseModel):
     -------
     add_etagere(etagere: Etagere) -> dict
         Ajoute une étagère à la cave et met à jour le nombre d'emplacements.
-    del_etagere(num_eta: int) -> dict
+    del_etagere(etagere: Etagere) -> dict
         Enlève une étagère de la cave et met à jour le nombre d'emplacements.
     update_cave() -> dict
         Met à jour la cave dans la base de données.
@@ -42,8 +42,8 @@ class Cave(BaseModel):
     """
 
     nom: str = Field(default="caveX")
-    nb_emplacement: int = Field(default=0)  # Initialize to 0
-    etageres: list[int] = Field(default_factory=list)  # List of integers for shelf numbers
+    nb_emplacement: int = Field(default=0)
+    etageres: list[Etagere] = Field(default_factory=list)  # List of Etagere objects
     config_db: dict = Field(default_factory=dict)
     collections: str = Field(default="caves")
 
@@ -55,7 +55,7 @@ class Cave(BaseModel):
         connex = Connexdb(**self.config_db)
 
         # Query to get all etageres related to this cave
-        etageres_result = connex.get_data_from_collection("etagere", {"cave": self.nom})
+        etageres_result = connex.get_data_from_collection("etagere", {"caves": self.nom})
 
         print("Etageres Result:", etageres_result)  # Debug print
 
@@ -77,22 +77,20 @@ class Cave(BaseModel):
 
     def add_etagere(self, etagere: Etagere) -> dict:
         """Ajoute une étagère à la cave et met à jour le nombre d'emplacements."""
-        if etagere.num in self.etageres:
+        if etagere in self.etageres:
             return {"message": "Une étagère avec ce numéro existe déjà.", "status": 400}
 
-        self.etageres.append(etagere.num)  # Add the etagere number to the cave's etageres
+        self.etageres.append(etagere)  # Append the Etagere object
         self.nb_emplacement += etagere.nb_place  # Update total available places
 
-        # Create the etagere in the database
-        etagere_creation_result: dict = etagere.create_etageres()  # Ensure this method is defined in Etagere
+        etagere_creation_result: dict = etagere.create_etageres()
         if etagere_creation_result.get("status") != 200:
             return {
                 "message": "Échec de la création de l'étagère dans la base de données.",
                 "status": etagere_creation_result.get("status", 500)
             }
 
-        # Update the cave in the database
-        rstatus: dict = self.update_cave()  
+        rstatus: dict = self.update_cave()
         if rstatus.get("status") != 200:
             return {
                 "message": "ajout de l'étagère à la cave a échoué !",
@@ -102,21 +100,18 @@ class Cave(BaseModel):
         return {
             "message": "Étagère ajoutée avec succès.",
             "status": 200,
-            "num_etagere": etagere.num  # Include only the num_etagere
+            "num_etagere": etagere.num
         }
 
-    def del_etagere(self, num_eta: int) -> dict:
+    def del_etagere(self, etagere: Etagere) -> dict:
         """Enlève une étagère de la cave et met à jour le nombre d'emplacements."""
-        if num_eta not in self.etageres:
-            return {"message": "Aucune étagère trouvée avec ce numéro.", "status": 404}
+        if etagere not in self.etageres:
+            return {"message": "Aucune étagère trouvée.", "status": 404}
 
-        # Find the Etagere object to update the number of available places
-        etagere: Etagere = Etagere(num=num_eta, cave=self.nom, config_db=self.config_db)  # Create an instance to access its properties
-        self.nb_emplacement -= etagere.nb_place  # Update total available places
-        self.etageres.remove(num_eta)  # Remove the etagere number from the cave's etageres
+        self.nb_emplacement -= etagere.nb_place  # Decrease total available places
+        self.etageres.remove(etagere)  # Remove the Etagere object
 
-        # Update the cave in the database
-        rstatus: dict = self.update_cave()  
+        rstatus: dict = self.update_cave()
         if rstatus.get("status") != 200:
             return {
                 "message": "Échec de la mise à jour de la cave après suppression de l'étagère.",
@@ -126,18 +121,31 @@ class Cave(BaseModel):
         return {"message": "Étagère supprimée avec succès.", "status": 200}
 
     def update_cave(self) -> dict:
-        """Met à jour la cave dans la base de données."""
+        """Met à jour la cave dans la base de données en s'assurant que les données sont à jour."""
         if not self.config_db:
             return {"message": "Configuration de la base de données requise.", "status": 500}
 
         connex: Connexdb = Connexdb(**self.config_db)
+
+        # Fetch the current data from the database
+        current_data_result = connex.get_data_from_collection(self.collections, {"nom": self.nom})
+        if current_data_result.get("status") != 200 or not current_data_result['data']:
+            return {"message": "Échec de la récupération des données actuelles de la cave.", "status": 404}
+
+        current_data = current_data_result['data'][0]
+
+        # Update the cave attributes based on the current data
+        self.nb_emplacement = current_data.get("nb_emplacement", 0)
+        self.etageres = current_data.get("etageres", [])
+
+        # Prepare the update data
         update_status: dict = connex.update_data_from_collection(
             self.collections,
             {"nom": self.nom},
             {
                 "nom": self.nom,
-                "nb_emplacement": self.nb_emplacement,
-                "etageres": self.etageres
+                "nb_emplacement": self.nb_emplacement,  # Keep the updated number of placements
+                "etageres": [etagere.get("num")for etagere in self.etageres]  # Store only the num of each Etagere
             }
         )
 
@@ -170,7 +178,7 @@ class Cave(BaseModel):
                 "_id": str(cave_data['_id']),  # Convert ObjectId to string
                 "nom": cave_data['nom'],
                 "nb_emplacement": cave_data['nb_emplacement'],
-                "etageres": cave_data.get('etagere', []),  # Ensure this only contains the shelf numbers
+                "etageres": [etagere.num for etagere in self.etageres],  # Store only the num of each Etagere
                 "etagere_data": etageres_response.get("etageres_data", [])  # Add the etageres data
             }
         }
@@ -269,5 +277,6 @@ if __name__ == "__main__":
     etagere = Etagere(num=1, nb_place=10, cave="cave2", config_db=config_db)
     print(cave.add_etagere(etagere))  # Ajout d'une étagère
     print(cave.get_cave())  # Consultation des informations de la cave
-    print(cave.del_etagere(1))  # Enlève l'étagère
+    print(cave.del_etagere(etagere))  # Enlève l'étagère
     print(cave.delete_cave(login_user))  # Supprime la cave
+

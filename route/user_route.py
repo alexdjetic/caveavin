@@ -71,21 +71,23 @@ async def collection(request: Request, user_cookies: dict = Depends(get_user_coo
         return RedirectResponse(url="/user/login", status_code=302)
 
     user = Personne(
-        perm = user_cookies["perm"],
-        login = user_cookies["login"],
-        password = "",
-        nom = user_cookies["nom"],
-        prenom = user_cookies["prenom"],
+        perm=user_cookies["perm"],
+        login=user_cookies["login"],
+        password="",  # Password is not needed for fetching caves
+        nom=user_cookies["nom"],
+        prenom=user_cookies["prenom"],
         collections="user",
-        config_db = config_db
+        config_db=config_db
     )
 
-    bottles_response = user.get_bottles()
+    bottles_response = user.get_bottles()  # Fetch reserved bottles
+    caves_response = user.get_caves()  # Fetch associated caves
 
     return templates.TemplateResponse("collection.html", {
         "request": request,
         **user_cookies,
-        "bouteilles": bottles_response["data"]
+        "bouteilles": bottles_response["data"],
+        "caves": caves_response["data"]  # Pass caves data to the template
     })
 
 @router.get("/delete/{user_login}", response_class=HTMLResponse)
@@ -131,13 +133,6 @@ async def create_post(request: Request,
                      perm: str = Form("perm"),
                      email: str = Form("email"),
                      user_cookies: dict = Depends(get_user_cookies)):
-    print(type(login))
-    print(type(nom))
-    print(type(perm))
-    print(type(login))
-    print(type(password))
-    print(type(email))
-
 
     user: Personne = Personne(
         login=str(login),

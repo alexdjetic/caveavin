@@ -23,27 +23,6 @@ async def add_cave_form_html(request: Request, user_cookies: dict = Depends(get_
         **user_cookies
     })
 
-@router.get("/", response_class=HTMLResponse)
-async def cave_index(request: Request, user_cookies: dict = Depends(get_user_cookies)):
-    if user_cookies["login"] is None:
-        return RedirectResponse(url="/user/login", status_code=302)
-    user = Personne(
-        login=user_cookies["login"],
-        password="",
-        nom=user_cookies["nom"],
-        prenom=user_cookies["prenom"],
-        perm=user_cookies["perm"],
-        collections="user",
-        config_db=config_db
-    )
-    caves_response = user.get_caves()
-    caves = caves_response.get("data", {})
-    return templates.TemplateResponse("cave.html", {
-        "request": request,
-        **user_cookies,
-        "caves": caves
-    })
-
 @router.post("/add_etagere")
 async def add_etagere(
     request: Request,
@@ -72,14 +51,10 @@ async def add_etagere(
     else:
         return JSONResponse(content={"status": "error", "message": result["message"]}, status_code=400)
 
-@router.get("/get_caves")
-async def get_caves_get_api_json(user_cookies: dict = Depends(get_user_cookies)):
-    print("get_caves route called")
-    if user_cookies["login"] is None:
-        return JSONResponse(content={"status": "error", "message": "User not logged in"}, status_code=401)
-
-    user = Personne(login=user_cookies["login"], config_db=config_db)
-    caves = user.get_caves()
+@router.get("/get_caves", response_class=JSONResponse)
+async def get_caves(user_cookies: dict = Depends(get_user_cookies)):
+    # Logic to retrieve caves
+    caves = ...  # Fetch caves from the database or other source
     return JSONResponse(content={"caves": caves})
 
 @router.get("/get_etageres/{cave_id}")
@@ -104,7 +79,7 @@ async def add_cave(
     cave: Cave = Cave(config_db=config_db, nom=cave_name, nb_emplacement=nb_emplacement)
     result = cave.create_cave(user_cookies["login"])
     if result["status"] == 200:
-        return RedirectResponse(url="/cave", status_code=302)
+        return RedirectResponse(url="/user/collection", status_code=302)
     else:
         return templates.TemplateResponse("add_cave.html", {
             "request": request,
@@ -112,13 +87,17 @@ async def add_cave(
             "error": result["message"]
         })
 
-@router.get("/delete/{cave_name}")
+@router.delete("/delete/{cave_name}", response_model=dict)
 async def delete_cave(cave_name: str, user_cookies: dict = Depends(get_user_cookies)):
     if user_cookies["login"] is None:
         return RedirectResponse(url="/user/login", status_code=302)
     cave: Cave = Cave(config_db=config_db, nom=cave_name)
     result = cave.delete_cave(user_cookies["login"])
-    return RedirectResponse(url="/cave", status_code=302)
+
+    if result.get("stay") != 200:
+        raise HTTPException(status_code=404, detail="Cave not found")
+
+    return {"status": "success", "message": "Cave deleted successfully"}
 
 @router.get("/{nom_cave}", response_class=HTMLResponse)
 async def cave_details(request: Request, nom_cave: str, user_cookies: dict = Depends(get_user_cookies)):

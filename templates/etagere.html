@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Étagères{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-6">Gestion des Étagères</h1>
+
+    <!-- Form to Add New Shelf -->
+    <div class="mb-6">
+        <h2 class="text-xl font-semibold mb-4">Ajouter une Étagère</h2>
+        <form id="add-etagere-form" method="post" action="/etagere/create">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="num" class="block text-sm font-medium text-gray-700">Numéro de l'Étagère</label>
+                    <input type="number" id="num" name="num" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="nb_place" class="block text-sm font-medium text-gray-700">Nombre de Places</label>
+                    <input type="number" id="nb_place" name="nb_place" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+            </div>
+            <button type="submit" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">Ajouter Étagère</button>
+        </form>
+    </div>
+
+    <!-- List of Shelves -->
+    <h2 class="text-xl font-semibold mb-4">Liste des Étagères</h2>
+    <div id="etagere-list" class="space-y-4">
+        {% for etagere in etageres %}
+        <div class="bg-white p-4 rounded-md shadow-md">
+            <h3 class="text-lg font-semibold">Étagère {{ etagere.num }}</h3>
+            <p><strong>Nombre de Places:</strong> {{ etagere.nb_place }}</p>
+            <p><strong>Nombre de Bouteilles:</strong> {{ etagere.nb_bouteille }}</p>
+            <p><strong>Cave:</strong> {{ etagere.cave }}</p> <!-- Display the cave value -->
+            <div class="mt-2">
+                <button onclick="editEtagere({{ etagere.num }})" class="bg-yellow-500 text-white px-2 py-1 rounded-md hover:bg-yellow-600">Modifier</button>
+                <button onclick="deleteEtagere({{ etagere.num }})" class="bg-red-500 text-white px-2 py-1 rounded-md hover:bg-red-600">Supprimer</button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    // Function to refresh the list of shelves
+    function fetchEtageres() {
+        fetch('/etagere/gets/') // Fetch all shelves without cave filtering
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Update the list of shelves
+                const etagereList = document.getElementById('etagere-list');
+                etagereList.innerHTML = ''; // Clear existing list
+                data.data.forEach(etagere => {
+                    const etagereDiv = document.createElement('div');
+                    etagereDiv.className = 'bg-white p-4 rounded-md shadow-md';
+                    etagereDiv.innerHTML = `
+                        <h3 class="text-lg font-semibold">Étagère ${etagere.num}</h3>
+                        <p><strong>Nombre de Places:</strong> ${etagere.nb_place}</p>
+                        <p><strong>Nombre de Bouteilles:</strong> ${etagere.nb_bouteille}</p>
+                        <p><strong>Cave:</strong> ${etagere.cave}</p>
+                        <div class="mt-2">
+                            <button onclick="editEtagere(${etagere.num})" class="bg-yellow-500 text-white px-2 py-1 rounded-md hover:bg-yellow-600">Modifier</button>
+                            <button onclick="deleteEtagere(${etagere.num})" class="bg-red-500 text-white px-2 py-1 rounded-md hover:bg-red-600">Supprimer</button>
+                        </div>
+                    `;
+                    etagereList.appendChild(etagereDiv);
+                });
+            })
+            .catch(error => {
+                console.error('There was a problem with the fetch operation:', error);
+            });
+    }
+
+    function editEtagere(num) {
+        // Implement edit functionality here
+        alert("Modifier l'étagère numéro: " + num);
+    }
+
+    function deleteEtagere(num) {
+        if (confirm("Êtes-vous sûr de vouloir supprimer l'étagère numéro: " + num + "?")) {
+            fetch(`/etagere/delete/${num}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                alert(data.message); // Show success message
+                fetchEtageres(); // Refresh the list of shelves
+            })
+            .catch(error => {
+                console.error('There was a problem with the fetch operation:', error);
+            });
+        }
+    }
+</script>
+{% endblock %}

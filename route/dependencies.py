@@ -22,7 +22,6 @@ def get_user_cookies(login: str = Cookie(None), perm: str = Cookie(None),
         "prenom": prenom
     }
 
-
 #######################################
 ##### Fonction nécessaire au CRUD #####
 #######################################

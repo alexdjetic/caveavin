@@ -1,5 +1,4 @@
 from pydantic import BaseModel, Field
-from .bouteille import Bouteille
 from .connexiondb import Connexdb
 
 
@@ -15,109 +14,103 @@ class Etagere(BaseModel):
         Le nombre de places disponibles sur l'étagère (par défaut -1).
     nb_bouteille : int
         Le nombre de bouteilles présentes sur l'étagère (par défaut -1).
-    bouteilles : list[Bouteille]
-        La liste des bouteilles stockées sur l'étagère (par défaut vide).
+    bouteilles : list[str]
+        La liste des noms de bouteilles stockées sur l'étagère (par défaut vide).
     config_db : dict
         La configuration de connexion à la base de données MongoDB.
     collections : str
         Le nom de la collection MongoDB pour les étagères.
     cave : str
         Le nom de la cave à laquelle l'étagère appartient.
+    login : str
+        Le login de l'utilisateur associé à l'étagère.
     """
 
     num: int = Field(default=-1)
     nb_place: int = Field(default=-1)
     nb_bouteille: int = Field(default=-1)
-    bouteilles: list[str] = Field(default=[])
+    bouteilles: list[str] = Field(default=[])  # List of bottle names
     config_db: dict = Field(default={})
     collections: str = Field(default="etagere")
-    cave: str = Field(default="")  # New field for cave association
+    cave: str = Field(default="")
+    login: str = Field(default="")  # New attribute for user login
 
-    def ajouter(self, bouteille: Bouteille) -> dict:
-        """
-        Ajoute une bouteille sur l'étagère.
-
-        Paramètres :
-        ------------
-        bouteille : Bouteille
-            La bouteille à ajouter.
-
-        Retour :
-        --------
-        dict :
-            Un dictionnaire avec un message et un statut indiquant si l'opération a réussi ou échoué.
-        """
-        if not isinstance(bouteille, Bouteille):
+    def ajouter(self, nom_bouteille: str) -> dict:
+        if not isinstance(nom_bouteille, str):
             return {
-                "message": "La bouteille n'est pas de type bouteille !",
+                "message": "Le nom de la bouteille n'est pas valide !",
                 "status": 501
             }
-
         if self.nb_place <= 0:
             return {
                 "message": "Plus de place disponible sur l'étagère !",
                 "status": 500
             }
 
-        # ajout à list locale de bouteille
-        self.bouteilles.append(bouteille)
-
-        # mise à jour des attributs de la bouteille
-        bouteille.num = self.num
-        bouteille.update({"nom": bouteille.nom}, {"num_etagere": self.num})
-
+        self.bouteilles.append(nom_bouteille)
         self.nb_place -= 1
         self.nb_bouteille += 1
 
-        # Mettre à jour l'étagère dans la base de données
         rstatus = self.update_etageres()
         if rstatus.get("status") != 200:
             return rstatus
 
         return {
-            "message": "La bouteille a été ajoutée sur l'étagère !",
+            "message": f"La bouteille '{nom_bouteille}' a été ajoutée sur l'étagère !",
             "status": 200
         }
 
-    def sortir(self, bouteille: Bouteille) -> dict:
-        """
-        Retire une bouteille de l'étagère.
-
-        Paramètres :
-        ------------
-        bouteille : Bouteille
-            La bouteille à retirer.
-
-        Retour :
-        --------
-        dict :
-            Un dictionnaire avec un message et un statut indiquant si l'opération a réussi ou échoué.
-        """
-        if not isinstance(bouteille, Bouteille):
+    def sortir(self, nom_bouteille: str) -> dict:
+        if not isinstance(nom_bouteille, str):
             return {
-                "message": "La bouteille n'est pas de type bouteille !",
+                "message": "Le nom de la bouteille n'est pas valide !",
                 "status": 501
             }
 
-        if bouteille not in self.bouteilles:
+        if nom_bouteille not in self.bouteilles:
             return {
                 "message": "La bouteille n'est pas présente sur cette étagère !",
                 "status": 500
             }
 
-        # Retirer la bouteille de l'étagère
-        self.bouteilles.remove(bouteille)
-        bouteille.delete({"nom": bouteille.nom})
+        self.bouteilles.remove(nom_bouteille)
         self.nb_place += 1
         self.nb_bouteille -= 1
 
-        # Mettre à jour l'étagère dans la base de données
         rstatus = self.update_etageres()
         if rstatus.get("status") != 200:
             return rstatus
 
         return {
-            "message": "La bouteille a été retirée de l'étagère !",
+            "message": f"La bouteille '{nom_bouteille}' a été retirée de l'étagère !",
+            "status": 200
+        }
+
+    def assign_cave(self, nom_cave: str) -> dict:
+        if not isinstance(nom_cave, str):
+            return {
+                "message": "Le nom de la cave n'est pas valide !",
+                "status": 501
+            }
+
+        self.cave = nom_cave
+        rstatus = self.update_etageres()
+        if rstatus.get("status") != 200:
+            return rstatus
+
+        return {
+            "message": f"L'étagère a été assignée à la cave '{nom_cave}' !",
+            "status": 200
+        }
+
+    def delete_cave(self) -> dict:
+        self.cave = ""
+        rstatus = self.update_etageres()
+        if rstatus.get("status") != 200:
+            return rstatus
+
+        return {
+            "message": "L'étagère a été dissociée de la cave.",
             "status": 200
         }
 
@@ -139,7 +132,7 @@ class Etagere(BaseModel):
         connex: Connexdb = Connexdb(**self.config_db)
 
         # Supprimer l'étagère de la base de données
-        rstatus = connex.delete_data_from_collection(self.collections, {"num": self.num})
+        rstatus = connex.delete_data_from_collection(self.collections, {"num": self.num, "login": self.login})
         if rstatus.get("status") != 200:
             return {
                 "message": "La suppression de l'étagère a échoué !",
@@ -172,6 +165,7 @@ class Etagere(BaseModel):
             "nb_place": self.nb_place,
             "nb_bouteille": self.nb_bouteille,
             "_bouteilles": [b.consulter() for b in self.bouteilles],
+            "login": self.login  # Include the login attribute
         }
 
         # Insérer l'étagère dans la base de données
@@ -200,11 +194,14 @@ class Etagere(BaseModel):
             }
 
         connex: Connexdb = Connexdb(**self.config_db)
+        
+        # Prepare the data in the specified format
         data_etagere = {
             "num": self.num,
             "nb_place": self.nb_place,
             "nb_bouteille": self.nb_bouteille,
-            "_bouteilles": [b.consulter() for b in self.bouteilles],
+            "bouteilles": self.bouteilles,
+            "caves": self.cave
         }
 
         rstatus = connex.update_data_from_collection(
@@ -230,6 +227,28 @@ class Etagere(BaseModel):
         dict :
             Un dictionnaire contenant toutes les étagères.
         """
+        if not self.config_db:
+            return {
+                "message": "Donner la configuration pour la base de données MongoDB",
+                "status": 500,
+            }
+
+        connex: Connexdb = Connexdb(**self.config_db)
+        result: dict = connex.get_all_data_from_collection(self.collections)
+
+        if result.get("status") != 200:
+            return {
+                "message": "La récupération des étagères a échoué !",
+                "status": result.get("status"),
+            }
+
+        return {
+            "message": "Voici toutes les étagères.",
+            "status": 200,
+            "data": result['data'],
+        }
+    
+    def get_bouteille_etageres(self) -> dict:
         if not self.config_db:
             return {
                 "message": "Donner la configuration pour la base de données MongoDB",

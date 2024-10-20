@@ -15,6 +15,9 @@ import logging
 #########################
 
 app = FastAPI()
+
+# Include the etagere routes
+app.include_router(etagere_router, prefix="/etagere", tags=["etagere"])
 templates = Jinja2Templates(directory="templates")
 app.secret_key = 'wm7ze*2b'
 app.add_middleware(RequestLoggingMiddleware)

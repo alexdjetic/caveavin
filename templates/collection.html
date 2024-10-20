@@ -6,9 +6,14 @@
 <div class="container mx-auto px-4 py-8">
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold">Votre Collection de Bouteilles</h1>
-        <button onclick="showAddBottlePopup()" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
-            + Ajouter une Bouteille
-        </button>
+        <div class="flex space-x-4"> <!-- Added a flex container for buttons -->
+            <button onclick="showAddBottlePopup()" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+                + Ajouter une Bouteille
+            </button>
+            <button onclick="showAddCavePopup()" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+                + Ajouter une Cave
+            </button>
+        </div>
     </div>
 
     {% if not bouteilles or bouteilles | length == 0 %}
@@ -66,6 +71,26 @@
     </div>
 </div>
 
+<!-- Add Cave Popup -->
+<div id="addCavePopup" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3 text-center">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Ajouter une nouvelle cave</h3>
+            <div class="mt-2 px-7 py-3">
+                <form id="addCaveForm" action="/cave/add-cave" method="POST">
+                    <input type="text" name="cave_name" placeholder="Nom de la Cave" class="mt-2 px-3 py-2 bg-white border shadow-sm border-slate-300 placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-sky-500 block w-full rounded-md sm:text-sm focus:ring-1" required>
+                    <input type="number" name="nb_emplacement" placeholder="Nombre d'emplacements" class="mt-2 px-3 py-2 bg-white border shadow-sm border-slate-300 placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-sky-500 block w-full rounded-md sm:text-sm focus:ring-1" required>
+                    <div class="items-center px-4 py-3">
+                        <button id="addCaveButton" type="submit" class="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                            Ajouter
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Move Bottle Popup -->
 <div id="moveBottlePopup" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
     <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
@@ -93,6 +118,31 @@
     </div>
 </div>
 
+<!-- Caves Section -->
+<div class="mt-8"></div>
+    <h2 class="text-2xl font-bold mb-4">Vos Caves</h2>
+    {% if not caves or caves | length == 0 %}
+        <div class="bg-yellow-200 text-yellow-800 p-4 rounded-md mb-4">
+            <p>Vous n'avez pas encore de cave. Commencez par en ajouter une !</p>
+        </div>
+    {% else %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for cave_name, cave_data in caves.items() %}
+            <div class="bg-white rounded-lg shadow-lg p-6" data-cave-name="{{ cave_name }}">
+                <img src="https://source.unsplash.com/featured/?wine-cellar" alt="Wine Cave Image" class="w-full h-48 object-cover rounded-md mb-4">
+                <h2 class="text-xl font-semibold">{{ cave_name }}</h2>
+                <p class="text-gray-600">Capacité: {{ cave_data.nb_emplacement }} emplacements</p>
+                <p class="text-gray-600">Étagères: {{ cave_data.etageres | length }}</p>
+                <div class="mt-4 flex justify-between">
+                    <a href="/cave/{{ cave_name }}" class="text-blue-500 hover:underline">Voir Détails</a>
+                    <a href="#" class="text-red-500 hover:underline" onclick="deleteCave('{{ cave_name }}')">Supprimer</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
 <script>
     function showAddBottlePopup() {
         document.getElementById('addBottlePopup').classList.remove('hidden');
@@ -102,13 +152,13 @@
         document.getElementById('addBottlePopup').classList.add('hidden');
     }
 
-    // Close the popup when clicking outside of it
-    document.getElementById('addBottlePopup').addEventListener('click', function(event) {
-        // Check if the click is on the overlay (background)
-        if (event.target === this) {
-            hideAddBottlePopup();
-        }
-    });
+    function showAddCavePopup() {
+        document.getElementById('addCavePopup').classList.remove('hidden');
+    }
+
+    function hideAddCavePopup() {
+        document.getElementById('addCavePopup').classList.add('hidden');
+    }
 
     document.getElementById('addBottleForm').addEventListener('submit', function(e) {
         e.preventDefault();
@@ -121,54 +171,22 @@
         .then(data => {
             if (data.status === 'success') {
                 alert('Bouteille ajoutée avec succès!');
-                hideAddBottlePopup(); // Ensure this is called
-                location.reload(); // Refresh the page to show the new bottle
+                hideAddBottlePopup();
+                location.reload();
             } else {
-                alert('Erreur lors de l\'ajout de la bouteille: ' + data.message);
+                alert('Erreur lors de l\'ajout de la bouteille');
             }
         })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Une erreur s\'est produite lors de l\'ajout de la bouteille.');
-        });
+        .catch(error => console.error('Erreur:', error));
     });
 
-    function showMoveBottlePopup(bottleName) {
-        document.getElementById('moveBottlePopup').classList.remove('hidden');
-        document.getElementById('moveBottleName').value = bottleName;
-        // Fetch caves and populate the cave select
-        fetch('/cave/get_caves')
-            .then(response => response.json())
-            .then(data => {
-                const caveSelect = document.getElementById('caveSelect');
-                caveSelect.innerHTML = '<option value="">Sélectionnez une cave</option>'; // Reset options
-                data.caves.forEach(cave => {
-                    const option = document.createElement('option');
-                    option.value = cave.nom;
-                    option.textContent = cave.nom;
-                    caveSelect.appendChild(option);
-                });
-            });
-        // Fetch shelves and populate the shelf select based on the selected cave
-        document.getElementById('caveSelect').addEventListener('change', function() {
-            const selectedCave = this.value;
-            fetch(`/etagere/get_etageres/${selectedCave}`)
-                .then(response => response.json())
-                .then(data => {
-                    const etagereSelect = document.getElementById('etagereSelect');
-                    etagereSelect.innerHTML = '<option value="">Sélectionnez une étagère</option>'; // Reset options
-                    data.etageres.forEach(etagere => {
-                        const option = document.createElement('option');
-                        option.value = etagere.nom;
-                        option.textContent = etagere.nom;
-                        etagereSelect.appendChild(option);
-                    });
-                });
-        });
+    function deleteCave(caveName) {
+        if (confirm('Êtes-vous sûr de vouloir supprimer cette cave ?')) {
+            fetch(`/cave/delete/${caveName}`, {
+                method: 'DELETE'
+            })
+        }
     }
 
-    function hideMoveBottlePopup() {
-        document.getElementById('moveBottlePopup').classList.add('hidden');
-    }
 </script>
 {% endblock %}
