@@ -12,8 +12,34 @@ config_db: dict = {
     "password": "wm7ze*2b"
 }
 
-def get_user_cookies(login: str = Cookie(None), perm: str = Cookie(None),
-                     nom: str = Cookie(None), prenom: str = Cookie(None), email: str = Cookie(None)) -> dict:
+def get_user_cookies(
+    login: str = Cookie(None),
+    perm: str = Cookie(None),
+    nom: str = Cookie(None),
+    prenom: str = Cookie(None),
+    email: str = Cookie(None)
+) -> dict:
+    """
+    Récupère les cookies de l'utilisateur.
+
+    Parameters
+    ----------
+    login : str
+        Le login de l'utilisateur.
+    perm : str
+        Les permissions de l'utilisateur.
+    nom : str
+        Le nom de l'utilisateur.
+    prenom : str
+        Le prénom de l'utilisateur.
+    email : str
+        L'email de l'utilisateur.
+
+    Returns
+    -------
+    dict
+        Un dictionnaire contenant les informations de l'utilisateur.
+    """
     return {
         "login": login,
         "email": email,
@@ -26,8 +52,13 @@ def get_user_cookies(login: str = Cookie(None), perm: str = Cookie(None),
 ##### Fonction nécessaire au CRUD #####
 #######################################
 
-def effectuer_operation_db(config_db: dict, collection: str, operation: str, data: dict = None,
-                           query: dict = None) -> dict:
+def effectuer_operation_db(
+    config_db: dict,
+    collection: str,
+    operation: str,
+    data: dict = None,
+    query: dict = None
+) -> dict:
     """
     Effectue une opération de base de données (insertion, suppression, mise à jour ou récupération)
     sur la collection spécifiée.
@@ -53,18 +84,19 @@ def effectuer_operation_db(config_db: dict, collection: str, operation: str, dat
     connex: Connexdb = Connexdb(**config_db)
     rstatus: dict = {}
 
+    # Effectuer l'opération en fonction du type spécifié
     match operation:
         case "insert":
-            rstatus: dict = connex.insert_data_into_collection(collection, data)
+            rstatus = connex.insert_data_into_collection(collection, data)
         case "delete":
-            rstatus: dict = connex.delete_data_from_collection(collection, query)
+            rstatus = connex.delete_data_from_collection(collection, query)
         case "update":
-            rstatus: dict = connex.update_data_from_collection(collection, query, data)
+            rstatus = connex.update_data_from_collection(collection, query, data)
         case "get":
             if query is None:
-                rstatus: dict = connex.get_all_data_from_collection(collection)
+                rstatus = connex.get_all_data_from_collection(collection)
             else:
-                rstatus: dict = connex.get_data_from_collection(collection, query)
+                rstatus = connex.get_data_from_collection(collection, query)
         case _:
             return {
                 "message": f"Opération CRUD invalide '{operation}' (options valides : insert, delete, update, get)",
@@ -77,7 +109,13 @@ def effectuer_operation_db(config_db: dict, collection: str, operation: str, dat
 ##### Gestion des commentaires #####
 ####################################
 
-def ajouter_commentaire(config_db: dict, nom_bouteille: str, commentaire: str, login: str, date: str) -> dict:
+def ajouter_commentaire(
+    config_db: dict,
+    nom_bouteille: str,
+    commentaire: str,
+    login: str,
+    date: str
+) -> dict:
     """
     Ajoute un commentaire à la collection 'commentaire'.
 
@@ -100,19 +138,18 @@ def ajouter_commentaire(config_db: dict, nom_bouteille: str, commentaire: str, l
         Un dictionnaire avec le résultat de l'opération.
     """
     data: dict = {
-        "auteur": login,  # Use login as the unique identifier
+        "auteur": login,
         "comment": commentaire,
         "nom_bouteille": nom_bouteille,
         "date": date
     }
     rstatus: dict = effectuer_operation_db(config_db, "commentaire", "insert", data)
 
-    # test si une erreur arrive dans la requète
+    # Vérifie si une erreur est survenue lors de l'opération
     if rstatus.get("status") != 200:
         return rstatus
 
     return {"message": "Le commentaire a été ajouté avec succès !", "status": 200}
-
 
 def supprimer_commentaire(config_db: dict, query: dict) -> dict:
     """
@@ -132,13 +169,11 @@ def supprimer_commentaire(config_db: dict, query: dict) -> dict:
     """
     rstatus: dict = effectuer_operation_db(config_db, "commentaire", "delete", query=query)
 
-    # test si une erreur arrive dans la requète
+    # Vérifie si une erreur est survenue lors de l'opération
     if rstatus.get("status") != 200:
         return rstatus
 
-    # message de succès de suppresion de commentaire
     return {"message": "Le commentaire a été supprimé avec succès !", "status": 200}
-
 
 def mettre_a_jour_commentaire(config_db: dict, query: dict, data: dict) -> dict:
     """
@@ -160,13 +195,11 @@ def mettre_a_jour_commentaire(config_db: dict, query: dict, data: dict) -> dict:
     """
     rstatus: dict = effectuer_operation_db(config_db, "commentaire", "update", data=data, query=query)
 
-    # test si une erreur arrive dans la requète
+    # Vérifie si une erreur est survenue lors de l'opération
     if rstatus.get("status") != 200:
         return rstatus
 
-    # message de succès de mise à jour de commentaire
     return {"message": "Le commentaire a été mis à jour avec succès !", "status": 200}
-
 
 def recuperer_commentaire(config_db: dict, query: dict = None) -> dict:
     """
@@ -186,11 +219,10 @@ def recuperer_commentaire(config_db: dict, query: dict = None) -> dict:
     """
     rstatus: dict = effectuer_operation_db(config_db, "commentaire", "get", query=query)
 
-    # test si une erreur arrive dans la requète
+    # Vérifie si une erreur est survenue lors de l'opération
     if rstatus.get("status") != 200:
         return rstatus
 
-    # message de succès de mise à jour de commentaire
     return {
         "message": "La liste des commentaires a été récupérée avec succès !",
         "status": 200,
@@ -222,19 +254,18 @@ def ajouter_notes(config_db: dict, nom_bouteille: str, note: float, login: str) 
         Un dictionnaire avec le résultat de l'opération.
     """
     data: dict = {
-        "auteur": login,  # Use login as the unique identifier
+        "auteur": login,  # Identifiant unique de l'auteur
         "note": note,
         "nom_bouteille": nom_bouteille
     }
 
     rstatus: dict = effectuer_operation_db(config_db, "note", "insert", data)
 
-    # test si une erreur arrive dans la requète
+    # Vérifie si une erreur est survenue lors de l'opération
     if rstatus.get("status") != 200:
         return rstatus
 
     return {"message": "La note a été ajoutée avec succès !", "status": 200}
-
 
 def supprimer_notes(config_db: dict, query: dict) -> dict:
     """
@@ -254,12 +285,11 @@ def supprimer_notes(config_db: dict, query: dict) -> dict:
     """
     rstatus: dict = effectuer_operation_db(config_db, "note", "delete", query=query)
 
-    # test si une erreur arrive dans la requète
+    # Vérifie si une erreur est survenue lors de l'opération
     if rstatus.get("status") != 200:
         return rstatus
 
     return {"message": "La note a été supprimée avec succès !", "status": 200}
-
 
 def mettre_a_jour_notes(config_db: dict, query: dict, data: dict) -> dict:
     """
@@ -281,12 +311,11 @@ def mettre_a_jour_notes(config_db: dict, query: dict, data: dict) -> dict:
     """
     rstatus: dict = effectuer_operation_db(config_db, "note", "update", data=data, query=query)
 
-    # test si une erreur arrive dans la requète
+    # Vérifie si une erreur est survenue lors de l'opération
     if rstatus.get("status") != 200:
         return rstatus
 
     return {"message": "La note a été mise à jour avec succès !", "status": 200}
-
 
 def recuperer_notes(config_db: dict, query: dict = None) -> dict:
     """
@@ -306,7 +335,7 @@ def recuperer_notes(config_db: dict, query: dict = None) -> dict:
     """
     rstatus: dict = effectuer_operation_db(config_db, "note", "get", query=query)
 
-    # test si une erreur arrive dans la requète
+    # Vérifie si une erreur est survenue lors de l'opération
     if rstatus.get("status") != 200:
         return rstatus
 
@@ -315,38 +344,3 @@ def recuperer_notes(config_db: dict, query: dict = None) -> dict:
         "status": 200,
         "notes": rstatus.get("data")
     }
-
-#######################################
-#####     Gestion des archives    #####
-#######################################
-
-def recuperer_archives(config_db: dict, collection: str, query: dict = None) -> dict:
-    """
-    Récupère des données de la collection spécifiée.
-
-    Parameters
-    ----------
-    config_db : dict
-        La configuration de la base de données.
-
-    Returns
-    -------
-    dict
-        Un dictionnaire avec le résultat de l'opération.
-    """
-    rstatus: dict = effectuer_operation_db(config_db, collection, "get", query=query)
-
-    # test si une erreur arrive dans la requète
-    if rstatus.get("status") != 200:
-        return rstatus
-
-    return {
-        "message": f"La liste des données de la collection '{collection}' a été récupérée avec succès !",
-        "status": 200,
-        "archives": rstatus.get("data")
-    }
-
-
-
-
-

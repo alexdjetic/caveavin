@@ -9,11 +9,15 @@
     <!-- Form to Add New Shelf -->
     <div class="mb-6">
         <h2 class="text-xl font-semibold mb-4">Ajouter une Étagère</h2>
-        <form id="add-etagere-form" method="post" action="/etagere/create">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form id="add-etagere-form" method="post" action="/cave/add-etagere" onsubmit="addEtagere(event)">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="nom_cave" class="block text-sm font-medium text-gray-700">Nom de la Cave</label>
+                    <input type="text" id="nom_cave" name="nom_cave" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
                 <div>
                     <label for="num" class="block text-sm font-medium text-gray-700">Numéro de l'Étagère</label>
-                    <input type="number" id="num" name="num" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <input type="number" id="num" name="num_etagere" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                 </div>
                 <div>
                     <label for="nb_place" class="block text-sm font-medium text-gray-700">Nombre de Places</label>
@@ -77,6 +81,45 @@
             });
     }
 
+    function addEtagere(event) {
+        event.preventDefault(); // Prevent the default form submission
+
+        const formData = new FormData(event.target); // Get form data
+        const data = Object.fromEntries(formData); // Convert form data to an object
+
+        // Ensure num_etagere and nb_place are sent as integers
+        data.num_etagere = parseInt(data.num_etagere, 10); // Convert to integer
+        data.nb_place = parseInt(data.nb_place, 10); // Convert to integer
+
+        // Check if the values are valid integers
+        if (isNaN(data.num_etagere) || isNaN(data.nb_place) || data.num_etagere <= 0 || data.nb_place <= 0) {
+            alert("Please enter valid positive integers for the shelf number and number of places.");
+            return; // Exit the function if the values are invalid
+        }
+        
+        console.log(JSON.stringify(data)); // Debug
+
+        fetch('/cave/add-etagere', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify(data), // Send the form data as JSON
+            credentials: 'include', // Include cookies with the request
+        })
+        .then(response => response.json()) // Parse the JSON response
+        .then(data => {
+            alert(data.message); // Show success message
+            fetchEtageres(); // Refresh the list of shelves
+        })
+        .catch(error => {
+            console.error('There was a problem with the fetch operation:', error);
+            alert("Error: " + error.message); // Show error message to the user
+        });
+    }
+
+
     function editEtagere(num) {
         // Implement edit functionality here
         alert("Modifier l'étagère numéro: " + num);
@@ -98,7 +141,7 @@
             })
             .then(data => {
                 alert(data.message); // Show success message
-                fetchEtageres(); // Refresh the list of shelves
+                //fetchEtageres(); // Refresh the list of shelves
             })
             .catch(error => {
                 console.error('There was a problem with the fetch operation:', error);

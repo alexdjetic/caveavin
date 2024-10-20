@@ -134,7 +134,7 @@
                 <p class="text-gray-600">Capacité: {{ cave_data.nb_emplacement }} emplacements</p>
                 <p class="text-gray-600">Étagères: {{ cave_data.etageres | length }}</p>
                 <div class="mt-4 flex justify-between">
-                    <a href="/cave/{{ cave_name }}" class="text-blue-500 hover:underline">Voir Détails</a>
+                    <a href="/cave/get/{{ cave_name }}" class="text-blue-500 hover:underline">Voir Détails</a>
                     <a href="#" class="text-red-500 hover:underline" onclick="deleteCave('{{ cave_name }}')">Supprimer</a>
                 </div>
             </div>
