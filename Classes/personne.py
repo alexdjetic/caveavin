@@ -1,56 +1,55 @@
 from pydantic import BaseModel, EmailStr, Field
 from Classes.connexiondb import Connexdb
 from typing import Optional, List, Dict, Any
+from bson import ObjectId
+
+
 
 class Personne(BaseModel):
     """
-    Classe représentant une personne, avec des fonctionnalités d'authentification et de gestion des données utilisateur.
+    A class to represent a person with authentication functionality.
 
-    Attributs
-    ---------
+    Attributes
+    ----------
     id : Optional[int]
-        Identifiant unique de la personne.
+        The unique identifier for the person.
     perm : Optional[str]
-        Niveau de permission de la personne.
+        The permission level of the person.
     login : Optional[str]
-        Nom d'utilisateur de connexion.
+        The login username of the person.
     password : Optional[str]
-        Mot de passe de la personne.
+        The password of the person.
     nom : Optional[str]
-        Nom de famille de la personne.
+        The last name of the person.
     prenom : Optional[str]
-        Prénom de la personne.
+        The first name of the person.
     email : Optional[EmailStr]
-        Adresse e-mail de la personne.
+        The email address of the person.
     photo : Optional[bytes]
-        Photo de la personne (en format binaire).
+        The photo of the person in binary format.
     bouteille_reserver : Optional[List[int]]
-        Liste des bouteilles réservées par la personne.
+        The list of reserved bottles for the person.
     config_db : Optional[Dict[str, Any]]
-        Configuration de la base de données MongoDB.
+        The database configuration for the person.
     collections : Optional[str]
-        Nom de la collection où sont stockées les données utilisateur.
-    caves : Optional[List[str]]
-        Liste des caves associées à la personne.
+        The collection name in the database.
 
-    Méthodes
-    --------
+    Methods
+    -------
     create() -> dict
-        Crée un utilisateur dans la base de données.
-    update(data: dict) -> dict
-        Met à jour les informations d'un utilisateur dans la base de données.
-    delete() -> dict
-        Supprime un utilisateur de la base de données.
-    get() -> dict
-        Récupère un utilisateur depuis la base de données.
-    auth() -> dict
-        Authentifie un utilisateur avec le login et le mot de passe fournis.
-    get_bottles() -> dict
-        Récupère la liste des bouteilles réservées par l'utilisateur.
-    get_caves() -> dict
-        Récupère les caves associées à l'utilisateur.
-    add_bottle(bottle_name: str) -> dict
-        Ajoute une bouteille à la liste des bouteilles réservées par l'utilisateur.
+        Creates a user in the database.
+    update(query: dict, data: dict) -> dict
+        Updates the user in the database.
+    delete(query: dict) -> dict
+        Deletes the user from the database.
+    get(query: dict) -> dict
+        Retrieves the user from the database.
+    auth(login: str, password: str) -> dict
+        Authenticates the person with the provided login and password.
+    get_user_reserved_bottles() -> dict
+        Retrieves the reserved bottles for the user based on their login.
+    add_bottle(bottle_id: str) -> dict
+        Adds a bottle to the user's bouteille_reserver list.
     """
 
     id: Optional[int] = Field(default=None)
@@ -67,28 +66,15 @@ class Personne(BaseModel):
     caves: Optional[List[str]] = Field(default_factory=list)
 
     def create(self) -> dict:
-        """
-        Crée un utilisateur dans la base de données.
-
-        Cette méthode insère les informations de l'utilisateur dans la collection spécifiée.
-        Si l'utilisateur existe déjà, elle renvoie un message d'erreur.
-
-        Returns
-        -------
-        dict
-            Un dictionnaire contenant un message de succès ou d'échec ainsi qu'un statut.
-        """
+        """Creates a user in the database."""
         if not self.config_db:
             return {
-                "message": "Veuillez fournir la configuration de la base de données MongoDB.",
+                "message": "Please provide the MongoDB database configuration.",
                 "status": 500,
             }
 
-        # Connexion à la base de données
-        connex = Connexdb(**self.config_db)
-
-        # Données de l'utilisateur à insérer dans la base
-        data_user = {
+        connex: Connexdb = Connexdb(**self.config_db)
+        data_user: dict = {
             "id": self.id,
             "perm": self.perm,
             "login": self.login,
@@ -99,16 +85,17 @@ class Personne(BaseModel):
             "bouteille_reserver": self.bouteille_reserver if self.bouteille_reserver else [],
         }
 
-        # Vérifie si l'utilisateur existe déjà
+        # Check if the user already exists
         exist_status = connex.exist(self.collections, {"login": self.login})
         if exist_status.get("status") == 200 and exist_status.get("message") == "User exists":
             return {
-                "message": "L'utilisateur existe déjà dans la base de données.",
+                "message": "The user already exists in the database.",
                 "status": 500
             }
 
-        # Insertion de l'utilisateur dans la base
-        rstatus = connex.insert_data_into_collection(self.collections, data_user)
+        # Insert the user into the database
+        rstatus: dict = connex.insert_data_into_collection(self.collections, data_user)
+
         if rstatus.get("status") != 200:
             return {
                 "message": rstatus.get("message"),
@@ -118,224 +105,314 @@ class Personne(BaseModel):
         return rstatus
 
     def update(self, data: dict) -> dict:
-        """
-        Met à jour les informations de l'utilisateur dans la base de données.
-
-        Si le champ 'caves' est fourni dans les données, les nouvelles caves sont ajoutées
-        à la liste des caves existantes sans duplication.
-
-        Parameters
-        ----------
-        data : dict
-            Les nouvelles données à mettre à jour pour l'utilisateur.
-
-        Returns
-        -------
-        dict
-            Un dictionnaire contenant le statut et un message de succès ou d'échec.
-        """
+        """Updates the user in the database."""
         if not self.config_db:
             return {
-                "message": "Veuillez fournir la configuration de la base de données MongoDB.",
+                "message": "Please provide the MongoDB database configuration.",
                 "status": 500,
             }
 
-        query = {"login": self.login}
-        connex = Connexdb(**self.config_db)
-
-        # Si les caves sont mises à jour, ajouter à la liste actuelle sans doublons
+        query: dict = {"login": self.login}
+        connex: Connexdb = Connexdb(**self.config_db)
+        
+        # Check if we're updating the caves field
         if "caves" in data:
+            # Use $addToSet to add the cave if it doesn't exist
             update_data = {"$addToSet": {"caves": {"$each": data["caves"]}}}
         else:
             update_data = {"$set": data}
-
-        rstatus = connex.update_data_from_collection(self.collections, query, update_data)
+        
+        rstatus: dict = connex.update_data_from_collection(self.collections, query, update_data)
         if rstatus.get("status") != 200:
             return {
-                "message": "Échec de la mise à jour de l'utilisateur.",
+                "message": "Failed to update the user!",
                 "status": rstatus.get("status")
             }
+
+        return rstatus
+
+    def update_user_info(self) -> dict:
+        """Updates the user in the database."""
+
+        query: dict = {"login": self.login}
+        update_data = {
+            "nom": self.nom,
+            "prenom": self.prenom,
+            "email": self.email,
+            "perm": self.perm
+        }
+        connex: Connexdb = Connexdb(**self.config_db)
+
+        rstatus: dict = connex.update_data_from_collection(self.collections, query, update_data)
+        if rstatus.get("status") != 200:
+            return rstatus
 
         return rstatus
 
     def delete(self) -> dict:
-        """
-        Supprime l'utilisateur de la base de données.
-
-        Cette méthode supprime l'utilisateur de la base de données en fonction du login.
-
-        Returns
-        -------
-        dict
-            Un dictionnaire contenant le statut et un message indiquant si l'opération a réussi.
-        """
+        """Deletes the user from the database."""
         if not self.config_db:
             return {
-                "message": "Veuillez fournir la configuration de la base de données MongoDB.",
+                "message": "Please provide the MongoDB database configuration.",
                 "status": 500,
             }
 
-        connex = Connexdb(**self.config_db)
-        query = {"login": self.login}
-
-        # Supprime l'utilisateur de la collection
-        rstatus = connex.delete_data_from_collection(self.collections, query)
+        connex: Connexdb = Connexdb(**self.config_db)
+        query: dict = {"login": self.login}
+        rstatus: dict = connex.delete_data_from_collection(self.collections, query)
         if rstatus.get("status") != 200:
             return {
-                "message": "Échec de la suppression de l'utilisateur.",
+                "message": "Failed to delete the user!",
                 "status": rstatus.get("status")
             }
 
+        # supprimer les bouteilles qu'utilisateur à aussi A FAIRE
+
+        rstatus: dict = connex.delete_data_from_collection(self.collections, query)
         return rstatus
 
     def get(self) -> dict:
-        """
-        Récupère les informations de l'utilisateur à partir de la base de données.
-
-        Returns
-        -------
-        dict
-            Un dictionnaire contenant les informations de l'utilisateur, le statut et un message.
-        """
+        """Retrieves the user from the database."""
         if not self.config_db:
             return {
-                "message": "Veuillez fournir la configuration de la base de données MongoDB.",
+                "message": "Please provide the MongoDB database configuration.",
                 "status": 500,
             }
 
-        query_search = {"login": self.login}
-        connex = Connexdb(**self.config_db)
-        rstatus = connex.get_data_from_collection(self.collections, query_search)
+        query_search: dict = {"login": self.login}
+        connex: Connexdb = Connexdb(**self.config_db)
+        rstatus: dict = connex.get_data_from_collection(self.collections, query_search)
 
         if rstatus.get("status") != 200:
             return {
-                "message": "Impossible de récupérer l'utilisateur.",
+                "message": "Failed to retrieve users for authentication!",
                 "status": rstatus.get("status"),
                 "data": []
             }
 
         return {
-            "message": "Utilisateur trouvé.",
+            "message": "User found",
             "status": 200,
             "data": rstatus.get("data")
         }
 
     def auth(self) -> Dict[str, Any]:
-        """
-        Authentifie l'utilisateur avec le login et le mot de passe fournis.
-
-        Returns
-        -------
-        dict
-            Un dictionnaire contenant un message, le statut et les données de l'utilisateur si l'authentification est réussie.
-        """
+        """Authenticates the person with the provided login and password."""
+        # Check if the database configuration is provided
         if not self.config_db:
             return {
-                "message": "Veuillez fournir la configuration de la base de données MongoDB.",
+                "message": "Please provide the MongoDB database configuration.",
                 "status": 500,
             }
 
+        # Create a database connection
         connex = Connexdb(**self.config_db)
-        query_search = {"login": self.login, "password": self.password}
 
-        # Recherche l'utilisateur dans la base
-        rstatus = connex.get_data_from_collection(self.collections, query_search)
+        # Prepare the query to search for the user
+        query_search: dict = {
+            "login": self.login,
+            "password": self.password
+        }
 
+        # Execute the query to fetch user data
+        rstatus: dict = connex.get_data_from_collection(self.collections, query_search)
+
+        # Check if any user was found
         if not rstatus.get("data"):
             return {
                 "message": "Aucun utilisateur trouvé avec les informations fournies.",
                 "status": 404
             }
 
+        # Return success message and user data if found
         return {
-            "message": "Authentification réussie.",
+            "message": "L'utilisateur a été authentifié avec succès !",
             "status": 200,
             "user_data": rstatus.get("data")[0]
         }
 
     def get_bottles(self) -> dict:
         """
-        Récupère la liste des bouteilles réservées par l'utilisateur.
+        Retrieves the reserved bottles for the user based on their login.
 
         Returns
         -------
         dict
-            Un dictionnaire contenant le statut, le message et les informations sur les bouteilles réservées.
+            A dictionary containing the status, message, and list of reserved bottles.
         """
-        connex = Connexdb(**self.config_db)
+        connex: Connexdb = Connexdb(**self.config_db)
 
-        # Récupère les données utilisateur
+        # Fetch user data by login
         user_data_result = connex.get_data_from_collection(self.collections, {"login": self.login})
+
+        print(user_data_result)
 
         if user_data_result.get("status") != 200 or not user_data_result.get("data"):
             return {
-                "message": "Utilisateur introuvable.",
-                "status": 404
+                "status": 401,
+                "message": "Identifiant ou mot de passe invalide",
+                "data": []
             }
 
         user_data = user_data_result.get("data")[0]
-        bottles = user_data.get("bouteille_reserver", [])
+        reserved_bottles = user_data.get("bouteille_reserver", [])
+
+        # check qu'aucune bouteille est disponible
+        if not reserved_bottles:
+            return {
+                "status": 200,
+                "message": "L'utilisateur ne possède aucune bouteille",
+                "data": [] # arret de cette fonction avec un tableau vide
+            }
+
+        # Consolidate bottle information
+        bottles = {}
+        for bottle_name in reserved_bottles:
+            bottle_info = connex.get_data_from_collection("bouteille", {"nom": bottle_name})
+
+            if bottle_info.get("status") == 200 and bottle_info.get("data"):
+                bottle_data = bottle_info["data"][0]
+                if bottle_name in bottles:
+                    bottles[bottle_name]["number"] += 1
+                else:
+                    bottle_data["number"] = 1
+                    bottles[bottle_name] = bottle_data
 
         return {
-            "message": "Bouteilles récupérées avec succès.",
             "status": 200,
-            "bottles": bottles
+            "message": "Toutes les bouteilles ont été récupérées",
+            "data": bottles
         }
 
     def get_caves(self) -> dict:
         """
-        Récupère les caves associées à l'utilisateur.
-
-        Returns
-        -------
-        dict
-            Un dictionnaire contenant les caves associées à l'utilisateur.
+        Retrieves the caves associated with the user based on their login.
         """
-        connex = Connexdb(**self.config_db)
+        connex: Connexdb = Connexdb(**self.config_db)
+
+        # Fetch user data by login
         user_data_result = connex.get_data_from_collection(self.collections, {"login": self.login})
 
         if user_data_result.get("status") != 200 or not user_data_result.get("data"):
             return {
-                "message": "Utilisateur introuvable.",
-                "status": 404
+                "status": 401,
+                "message": "Identifiant ou mot de passe invalide",
+                "data": []
             }
 
         user_data = user_data_result.get("data")[0]
-        caves = user_data.get("caves", [])
+        user_caves = user_data.get("caves", [])
+
+        # Check if the user has no caves available
+        if not user_caves:
+            return {
+                "status": 200,
+                "message": "L'utilisateur ne possède aucune cave",
+                "data": {}
+            }
+
+        # Fetch cave information for each cave associated with the user
+        caves = {}
+        for cave_name in user_caves:
+            cave_info = connex.get_data_from_collection("caves", {"nom": cave_name})
+            if cave_info.get("status") == 200 and cave_info.get("data"):
+                caves[cave_name] = cave_info["data"][0]
 
         return {
-            "message": "Caves récupérées avec succès.",
             "status": 200,
-            "caves": caves
+            "message": "Toutes les caves ont été récupérées",
+            "data": caves
         }
 
     def add_bottle(self, bottle_name: str) -> dict:
         """
-        Ajoute une bouteille à la liste des bouteilles réservées de l'utilisateur.
+        Adds a bottle to the user's bouteille_reserver list.
 
         Parameters
         ----------
         bottle_name : str
-            Le nom de la bouteille à ajouter.
+            The name of the bottle to be added.
 
         Returns
         -------
         dict
-            Un dictionnaire contenant le message, le statut et la liste mise à jour des bouteilles réservées.
+            A dictionary containing the status and message of the operation.
         """
-        connex = Connexdb(**self.config_db)
+        if not self.config_db:
+            return {
+                "message": "Please provide the MongoDB database configuration.",
+                "status": 500,
+            }
 
-        # Ajoute la bouteille à la liste en évitant les doublons
+        connex: Connexdb = Connexdb(**self.config_db)
+
+        # Fetch the current user's data to get the existing bouteille_reserver list
+        user_data_result = connex.get_data_from_collection(self.collections, {"login": self.login})
+
+        if user_data_result.get("status") != 200 or not user_data_result.get("data"):
+            return {
+                "status": 401,
+                "message": "User not found or invalid login."
+            }
+
+        # Get the current bouteille_reserver list
+        user_data = user_data_result.get("data")[0]
+        current_bottles = user_data.get("bouteille_reserver", [])
+
+        # Append the new bottle name to the list
+        if bottle_name not in current_bottles:
+            current_bottles.append(bottle_name)
+
+        # Update the user's bouteille_reserver list in the database
         update_result = connex.update_data_from_collection(
             self.collections,
             {"login": self.login},
-            {"$addToSet": {"bouteille_reserver": bottle_name}}
+            {"bouteille_reserver": current_bottles}
         )
+
+        print(update_result)
 
         if update_result.get("status") != 200:
             return {
-                "message": "Erreur lors de l'ajout de la bouteille.",
-                "status": update_result.get("status")
+                "status": 500,
+                "message": update_result.get("message")
             }
 
-        return self.get_bottles()
+        return {
+            "status": 200,
+            "message": "Bottle added successfully to user's collection"
+        }
+
+
+if __name__ == '__main__':
+    config_db: dict = {
+        "host": 'localhost',
+        "port": 27018,
+        "username": "root",
+        "password": "wm7ze*2b"
+    }
+
+    user = Personne(
+        login="alexandre",
+        password="wm7ze*2b",
+        config_db=config_db,
+        collections="user"
+    )
+
+    user.create()
+    print("Before update:")
+    print(user.get())
+
+    # print("\nUpdating caves:")
+    # print(user.update({"caves": ["cave2"]}))
+
+    #print("\nAfter update:")
+    # print(user.get())
+
+    # Test add_bottle method
+    # print("\nAdding a bottle:")
+    # bottle_id = "test"
+    # print(user.add_bottle(bottle_id))
+
+    # print("\nAfter adding bottle:")
+    # print(user.get())

@@ -3,231 +3,251 @@ from pymongo.errors import PyMongoError
 
 class Connexdb:
     """
-    Classe pour gérer les connexions et opérations avec MongoDB.
+    A class to manage MongoDB connections and operations.
 
-    Attributs
-    ---------
+    Attributes
+    ----------
     host : str
-        Le nom d'hôte du serveur MongoDB.
+        The hostname of the MongoDB server.
     port : int
-        Le numéro de port du serveur MongoDB.
+        The port number of the MongoDB server.
     username : str
-        Le nom d'utilisateur pour se connecter à MongoDB.
+        The username to connect to MongoDB.
     password : str
-        Le mot de passe pour se connecter à MongoDB.
+        The password to connect to MongoDB.
     client : MongoClient
-        L'instance du client MongoDB.
+        The MongoDB client instance.
     db : Database
-        L'instance de la base de données MongoDB.
+        The MongoDB database instance.
 
-    Méthodes
-    --------
+    Methods
+    -------
     get_all_collection_name() -> dict
-        Récupère tous les noms de collections de la base de données.
+        Fetches all collection names from the database.
     get_all_data_from_collection(collection: str) -> dict
-        Récupère toutes les données d'une collection spécifiée.
+        Fetches all data from a specified collection.
     delete_data_from_collection(collection: str, query: dict) -> dict
-        Supprime des données d'une collection spécifiée en fonction d'une requête.
+        Deletes data from a specified collection based on a query.
     update_data_from_collection(collection: str, query: dict, new_data: dict) -> dict
-        Met à jour des données dans une collection spécifiée en fonction d'une requête.
+        Updates data in a specified collection based on a query.
     insert_data_into_collection(collection: str, data: dict) -> dict
-        Insère des données dans une collection spécifiée.
+        Inserts data into a specified collection.
     exist(collection: str, query: dict) -> dict
-        Vérifie si un document existe dans une collection spécifiée en fonction d'une requête.
+        Checks if a document exists in a specified collection based on a query.
     close() -> dict
-        Ferme la connexion à MongoDB.
+        Closes the MongoDB connection.
     """
 
     def __init__(self, host='localhost', port=27018, username=None, password=None):
         """
-        Initialise la classe Connexdb avec les détails du serveur MongoDB fournis.
+        Initializes the Connexdb class with the provided MongoDB server details.
 
-        Paramètres
+        Parameters
         ----------
-        host : str, optionnel
-            Le nom d'hôte du serveur MongoDB (par défaut 'localhost').
-        port : int, optionnel
-            Le numéro de port du serveur MongoDB (par défaut 27018).
-        username : str, optionnel
-            Le nom d'utilisateur pour se connecter à MongoDB (par défaut None).
-        password : str, optionnel
-            Le mot de passe pour se connecter à MongoDB (par défaut None).
+        host : str, optional
+            The hostname of the MongoDB server (default is 'localhost').
+        port : int, optional
+            The port number of the MongoDB server (default is 27018).
+        username : str, optional
+            The username to connect to MongoDB (default is None).
+        password : str, optional
+            The password to connect to MongoDB (default is None).
         """
         if username and password:
             self.client = MongoClient(f"mongodb://{username}:{password}@{host}:{port}/")
         else:
             self.client = MongoClient(host=host, port=port)
 
-        self.db = self.client.caveavin  # Connexion à la base de données 'caveavin'
+        self.db = self.client.caveavin
 
     def get_all_collection_name(self) -> dict:
         """
-        Récupère tous les noms de collections de la base de données.
+        Fetches all collection names from the database.
 
-        Retourne
-        --------
+        Returns
+        -------
         dict
-            Un dictionnaire contenant le statut, un message et les noms des collections.
+            A dictionary with status, message, and data (collection names).
         """
         try:
             collections = self.db.list_collection_names()
-            return {"status": 200, "message": "Collections récupérées avec succès", "data": collections}
+            return {"status": 200, "message": "Successfully fetched collections", "data": collections}
         except PyMongoError as e:
-            return {"status": 500, "message": f"Erreur lors de la récupération des collections : {e}"}
+            return {"status": 500, "message": f"Error fetching collection names: {e}"}
 
     def get_all_data_from_collection(self, collection: str) -> dict:
         """
-        Récupère toutes les données d'une collection spécifiée.
+        Fetches all data from a specified collection.
 
-        Paramètres
+        Parameters
         ----------
         collection : str
-            Le nom de la collection à partir de laquelle récupérer les données.
+            The name of the collection to fetch data from.
 
-        Retourne
-        --------
+        Returns
+        -------
         dict
-            Un dictionnaire contenant le statut, un message et les documents de la collection.
+            A dictionary with status, message, and data (documents from the collection).
         """
         try:
             data = list(self.db[collection].find())
-            return {"status": 200, "message": "Données récupérées avec succès", "data": data}
+            return {"status": 200, "message": "Successfully fetched data", "data": data}
         except PyMongoError as e:
-            return {"status": 500, "message": f"Erreur lors de la récupération des données de la collection '{collection}' : {e}", "data": []}
+            return {"status": 500, "message": f"Error fetching data from collection '{collection}': {e}", "data": []}
 
     def get_data_from_collection(self, collection: str, query: dict) -> dict:
         """
-        Récupère des données d'une collection spécifiée en fonction d'une requête.
+        Fetches data from a specified collection based on a query.
 
-        Paramètres
+        Parameters
         ----------
         collection : str
-            Le nom de la collection à partir de laquelle récupérer les données.
+            The name of the collection to fetch data from.
         query : dict
-            La requête pour filtrer les documents.
+            The query to filter the documents.
 
-        Retourne
-        --------
+        Returns
+        -------
         dict
-            Un dictionnaire contenant le statut, un message et les documents correspondants.
+            A dictionary with status, message, and data (matching documents from the collection).
         """
         try:
             data = list(self.db[collection].find(query))
-            return {"status": 200, "message": "Données récupérées avec succès", "data": data}
+            return {"status": 200, "message": "Successfully fetched data", "data": data}
         except PyMongoError as e:
-            return {"status": 500, "message": f"Erreur lors de la récupération des données de la collection '{collection}' : {e}", "data": []}
+            return {"status": 500, "message": f"Error fetching data from collection '{collection}': {e}", "data": []}
 
     def delete_data_from_collection(self, collection: str, query: dict) -> dict:
         """
-        Supprime des données d'une collection spécifiée en fonction d'une requête.
+        Deletes data from a specified collection based on a query.
 
-        Paramètres
+        Parameters
         ----------
         collection : str
-            Le nom de la collection à partir de laquelle supprimer des données.
+            The name of the collection to delete data from.
         query : dict
-            La requête pour sélectionner le document à supprimer.
+            The query to match the document to delete.
 
-        Retourne
-        --------
+        Returns
+        -------
         dict
-            Un dictionnaire contenant le statut et un message.
+            A dictionary with status and message.
         """
         try:
             self.db[collection].delete_one(query)
-            return {"status": 200, "message": "Données supprimées avec succès"}
+            return {"status": 200, "message": "Successfully deleted data"}
         except PyMongoError as e:
-            return {"status": 500, "message": f"Erreur lors de la suppression des données de la collection '{collection}' : {e}"}
+            return {"status": 500, "message": f"Error deleting data from collection '{collection}': {e}"}
         except TypeError as e:
-            return {"status": 501, "message": f"Erreur de type : {e}"}
+            return {"status": 501, "message": f"Type Error: {e}"}
 
     def update_data_from_collection(self, collection_name: str, query: dict, data: dict) -> dict:
-        """
-        Met à jour des données dans une collection spécifiée en fonction d'une requête.
-
-        Paramètres
-        ----------
-        collection_name : str
-            Le nom de la collection à mettre à jour.
-        query : dict
-            La requête pour sélectionner le document à mettre à jour.
-        data : dict
-            Les nouvelles données à appliquer.
-
-        Retourne
-        --------
-        dict
-            Un dictionnaire contenant le statut et un message.
-        """
         try:
             collection = self.db[collection_name]
             result = collection.update_one(query, {"$set": data})
-
+            
             if result.modified_count == 0:
-                return {"status": 404, "message": "Aucun document trouvé à mettre à jour"}
-
-            return {"status": 200, "message": "Document mis à jour avec succès"}
-        except PyMongoError as e:
-            return {"status": 500, "message": f"Erreur lors de la mise à jour du document : {e}"}
+                return {"status": 404, "message": "No document found to update"}
+            
+            return {"status": 200, "message": "Document updated successfully"}
+        except Exception as e:
+            return {"status": 500, "message": f"Error updating document: {str(e)}"}
 
     def insert_data_into_collection(self, collection: str, data: dict) -> dict:
         """
-        Insère des données dans une collection spécifiée.
+        Inserts data into a specified collection.
 
-        Paramètres
+        Parameters
         ----------
         collection : str
-            Le nom de la collection dans laquelle insérer les données.
+            The name of the collection to insert data into.
         data : dict
-            Les données à insérer sous forme de document.
+            The data to insert as a document.
 
-        Retourne
-        --------
+        Returns
+        -------
         dict
-            Un dictionnaire contenant le statut et un message.
+            A dictionary with status and message.
         """
         try:
             self.db[collection].insert_one(data)
-            return {"status": 200, "message": "Données insérées avec succès"}
+            return {"status": 200, "message": "Successfully inserted data"}
         except PyMongoError as e:
-            return {"status": 500, "message": f"Erreur lors de l'insertion des données dans la collection '{collection}' : {e}"}
+            return {"status": 500, "message": f"Error inserting data into collection '{collection}': {e}"}
         except TypeError as e:
-            return {"status": 501, "message": f"Erreur de type : {e}"}
+            return {"status": 501, "message": f"Type Error: {e}"}
 
     def exist(self, collection: str, query: dict) -> dict:
         """
-        Vérifie si un document existe dans une collection spécifiée en fonction d'une requête.
+        Checks if a document exists in a specified collection based on a query.
 
-        Paramètres
+        Parameters
         ----------
         collection : str
-            Le nom de la collection où vérifier l'existence du document.
+            The name of the collection to check for existence.
         query : dict
-            La requête pour identifier le document.
+            The query to match the document.
 
-        Retourne
-        --------
+        Returns
+        -------
         dict
-            Un dictionnaire contenant le statut et un message indiquant si le document existe ou non.
+            A dictionary with status and message.
         """
         try:
             exists = self.db[collection].find_one(query) is not None
-            return {"status": 200, "message": "Le document existe" if exists else "Le document n'existe pas"}
+            return {"status": 200, "message": "Data exists" if exists else "User does not exist"}
         except PyMongoError as e:
-            return {"status": 500, "message": f"Erreur lors de la vérification de l'existence dans la collection '{collection}' : {e}"}
+            return {"status": 500, "message": f"Error checking existence in collection '{collection}': {e}"}
         except TypeError as e:
-            return {"status": 501, "message": f"Erreur de type : {e}"}
+            return {"status": 501, "message": f"Type Error: {e}"}
 
     def close(self) -> dict:
         """
-        Ferme la connexion MongoDB.
+        Closes the MongoDB connection.
 
-        Retourne
-        --------
+        Returns
+        -------
         dict
-            Un dictionnaire contenant le statut et un message.
+            A dictionary with status and message.
         """
         if self.client:
             self.client.close()
-            return {"status": 200, "message": "Connexion fermée avec succès"}
-        return {"status": 500, "message": "Erreur lors de la fermeture de la connexion"}
+            return {"status": 200, "message": "Connection closed successfully"}
+
+if __name__ == '__main__':
+    db_connection = Connexdb(
+        host='localhost',
+        port=27018,
+        username="root",
+        password="wm7ze*2b"
+    )
+    collections: str = 'user'
+
+    # Example Usage
+    print(f"Collections: {db_connection.get_all_collection_name()}")
+
+    # Inserting data into the 'bouteille' collection
+    new_bouteille: dict = {
+        "name": "Chateau Margaux",
+        "type": "Rouge",
+        "year": 2015,
+        "region": "France",
+        "price": 150.0,
+        "notes": [],
+        "comments": [],
+        "photo": "binarydatahere"
+    }
+    insert_result = db_connection.insert_data_into_collection(collections, new_bouteille)
+    print(insert_result)
+
+    # Fetching data from the 'bouteille' collection
+    bouteille_data = db_connection.get_all_data_from_collection(collections)  # <- Ensure you fetch from 'bouteille'
+    print(f"Data in 'bouteille' collection: {bouteille_data}")
+
+    # Checking if the data exists
+    existence_check = db_connection.exist(collections, {"name": "Chateau Margaux"})
+    print(existence_check)
+
+    # Closing the connection
+    close_result = db_connection.close()
+    print(close_result)

@@ -190,10 +190,17 @@ async def update_post(request: Request,
         collections="user"
     )
 
+    data: dict = {
+        "login": str(login),
+        "nom": str(nom),
+        "prenom": str(prenom),
+        "perm": str(perm)
+    }
+
     if password:
         user.password = password
 
-    rstatus: dict = user.update_user_info()  # Appelle la méthode de mise à jour des informations utilisateur
+    rstatus: dict = user.update(data)  # Appelle la méthode de mise à jour des informations utilisateur
 
     print(rstatus)
 

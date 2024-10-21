@@ -274,3 +274,37 @@ async def post_update_bouteille(
         }
 
     return JSONResponse(content={"status": "success", "message": "Bouteille mise à jour avec succès"})
+
+@router.post("/commentandpair", response_class=JSONResponse)
+async def comment_and_pair(
+    request: Request,
+    user_cookies: dict = Depends(get_user_cookies),
+    comment: str = Form(...),  # Ensure to use ... to require this field
+    rating: float = Form(...),  # Ensure to use ... to require this field
+    nom_bouteille: str = Form(...)
+):
+    if not user_cookies["login"]:
+        raise HTTPException(status_code=401, detail="User not logged in")
+
+    # Use the login as the unique identifier for the user
+    login = user_cookies["login"]
+
+    # Get the current date in the desired format (e.g., YYYY-MM-DD)
+    current_date = datetime.now().strftime("%Y-%m-%d")
+
+    # Add the comment to the database
+    comment_response = ajouter_commentaire(config_db, nom_bouteille, comment, login, date=current_date)
+
+    # Check if the comment was added successfully
+    if comment_response.get("status") != 200:
+        return JSONResponse(content={"status": "error", "message": comment_response.get("message")})
+
+    # Add the rating to the database
+    rating_response = ajouter_notes(config_db, nom_bouteille, rating, login)
+
+    # Check if the rating was added successfully
+    if rating_response.get("status") != 200:
+        return JSONResponse(content={"status": "error", "message": rating_response.get("message")})
+
+    # Redirect to the bottle details page
+    return RedirectResponse(url=f"/bottle/{nom_bouteille}", status_code=302)

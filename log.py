@@ -15,7 +15,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     y compris les en-têtes, le corps, le statut de la réponse et le temps d'exécution.
     """
 
-    async def dispatch(self, request: Request, call_next) -> Response:
+    async def dispatch(self, request: Request, call_next):
         """
         Intercepte la requête, enregistre les détails, et traite la réponse.
 

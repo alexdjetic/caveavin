@@ -11,9 +11,9 @@ class Etagere(BaseModel):
     num : int
         Le numéro de l'étagère (par défaut -1).
     nb_place : int
-        Le nombre de places disponibles sur l'étagère (par défaut -1).
+        Le nombre de places disponibles sur l'étagère (par défaut 0).
     nb_bouteille : int
-        Le nombre de bouteilles présentes sur l'étagère (par défaut -1).
+        Le nombre de bouteilles présentes sur l'étagère (par défaut 0).
     bouteilles : list[str]
         La liste des noms de bouteilles stockées sur l'étagère (par défaut vide).
     config_db : dict
@@ -27,45 +27,46 @@ class Etagere(BaseModel):
     """
 
     num: int = Field(default=-1)
-    nb_place: int = Field(default=-1)
-    nb_bouteille: int = Field(default=-1)
-    bouteilles: list[str] = Field(default=[])  # Liste des noms de bouteilles stockées
-    config_db: dict = Field(default={})  # Configuration de la base de données MongoDB
+    nb_place: int = Field(default=0)
+    nb_bouteille: int = Field(default=0)
+    bouteilles: list[str] = Field(default=[])  # List of bottle names
+    config_db: dict = Field(default={})
     collections: str = Field(default="etagere")
     cave: str = Field(default="")
-    login: str = Field(default="")  # Nouveau champ pour le login de l'utilisateur
+    login: str = Field(default="")  # New attribute for user login
 
     def ajouter(self, nom_bouteille: str) -> dict:
         """
-        Ajoute une bouteille sur l'étagère si de la place est disponible.
+        Ajoute une bouteille à l'étagère.
 
-        Paramètre :
-        -----------
+        Paramètres :
+        ------------
         nom_bouteille : str
             Le nom de la bouteille à ajouter.
 
         Retour :
         --------
         dict :
-            Message indiquant le succès ou l'échec de l'opération et le statut HTTP correspondant.
+            Un dictionnaire avec un message et un statut indiquant si l'opération a réussi ou échoué.
         """
         if not isinstance(nom_bouteille, str):
             return {
                 "message": "Le nom de la bouteille n'est pas valide !",
                 "status": 501
             }
-
         if self.nb_place <= 0:
             return {
                 "message": "Plus de place disponible sur l'étagère !",
                 "status": 500
             }
 
-        self.bouteilles.append(nom_bouteille)  # Ajoute la bouteille
-        self.nb_place -= 1  # Diminue la place disponible
-        self.nb_bouteille += 1  # Incrémente le nombre de bouteilles
+        # Ajouter la bouteille à la liste
+        self.bouteilles.append(nom_bouteille)
+        self.nb_place -= 1
+        self.nb_bouteille += 1
 
-        rstatus = self.update_etageres()  # Met à jour la base de données
+        # Mettre à jour les informations de l'étagère dans la base de données
+        rstatus = self.update_etageres()
         if rstatus.get("status") != 200:
             return rstatus
 
@@ -74,19 +75,20 @@ class Etagere(BaseModel):
             "status": 200
         }
 
+    
     def sortir(self, nom_bouteille: str) -> dict:
         """
         Retire une bouteille de l'étagère.
 
-        Paramètre :
-        -----------
+        Paramètres :
+        ------------
         nom_bouteille : str
             Le nom de la bouteille à retirer.
 
         Retour :
         --------
         dict :
-            Message indiquant le succès ou l'échec de l'opération et le statut HTTP correspondant.
+            Un dictionnaire avec un message et un statut indiquant si l'opération a réussi ou échoué.
         """
         if not isinstance(nom_bouteille, str):
             return {
@@ -100,11 +102,13 @@ class Etagere(BaseModel):
                 "status": 500
             }
 
-        self.bouteilles.remove(nom_bouteille)  # Retire la bouteille
-        self.nb_place += 1  # Augmente la place disponible
-        self.nb_bouteille -= 1  # Diminue le nombre de bouteilles
+        # Retirer la bouteille de la liste
+        self.bouteilles.remove(nom_bouteille)
+        self.nb_place += 1
+        self.nb_bouteille -= 1
 
-        rstatus = self.update_etageres()  # Met à jour la base de données
+        # Mettre à jour les informations de l'étagère dans la base de données
+        rstatus = self.update_etageres()
         if rstatus.get("status") != 200:
             return rstatus
 
@@ -117,15 +121,15 @@ class Etagere(BaseModel):
         """
         Assigne une cave à l'étagère.
 
-        Paramètre :
-        -----------
+        Paramètres :
+        ------------
         nom_cave : str
             Le nom de la cave à assigner.
 
         Retour :
         --------
         dict :
-            Message indiquant le succès de l'opération et le statut HTTP correspondant.
+            Un dictionnaire avec un message et un statut indiquant si l'opération a réussi ou échoué.
         """
         if not isinstance(nom_cave, str):
             return {
@@ -133,8 +137,8 @@ class Etagere(BaseModel):
                 "status": 501
             }
 
-        self.cave = nom_cave  # Assigne la cave
-        rstatus = self.update_etageres()  # Met à jour la base de données
+        self.cave = nom_cave
+        rstatus = self.update_etageres()
         if rstatus.get("status") != 200:
             return rstatus
 
@@ -150,10 +154,10 @@ class Etagere(BaseModel):
         Retour :
         --------
         dict :
-            Message indiquant le succès de l'opération et le statut HTTP correspondant.
+            Un dictionnaire avec un message et un statut indiquant si l'opération a réussi ou échoué.
         """
-        self.cave = ""  # Dissocie la cave
-        rstatus = self.update_etageres()  # Met à jour la base de données
+        self.cave = ""
+        rstatus = self.update_etageres()
         if rstatus.get("status") != 200:
             return rstatus
 
@@ -169,7 +173,7 @@ class Etagere(BaseModel):
         Retour :
         --------
         dict :
-            Message indiquant le succès ou l'échec de l'opération.
+            Un dictionnaire avec un message et un statut indiquant si l'opération a réussi ou échoué.
         """
         if not self.config_db:
             return {
@@ -177,7 +181,7 @@ class Etagere(BaseModel):
                 "status": 500,
             }
 
-        connex = Connexdb(**self.config_db)  # Crée une connexion à la base de données
+        connex: Connexdb = Connexdb(**self.config_db)
 
         # Supprimer l'étagère de la base de données
         rstatus = connex.delete_data_from_collection(self.collections, {"num": self.num, "login": self.login})
@@ -192,6 +196,7 @@ class Etagere(BaseModel):
             "status": 200
         }
 
+
     def create_etageres(self) -> dict:
         """
         Crée une nouvelle étagère dans la base de données.
@@ -199,7 +204,7 @@ class Etagere(BaseModel):
         Retour :
         --------
         dict :
-            Message indiquant le succès ou l'échec de l'opération.
+            Un dictionnaire avec un message et un statut indiquant si l'opération a réussi ou échoué.
         """
         if not self.config_db:
             return {
@@ -207,13 +212,13 @@ class Etagere(BaseModel):
                 "status": 500,
             }
 
-        connex = Connexdb(**self.config_db)  # Crée une connexion à la base de données
+        connex: Connexdb = Connexdb(**self.config_db)
         data_etagere = {
             "num": self.num,
             "nb_place": self.nb_place,
             "nb_bouteille": self.nb_bouteille,
-            "bouteilles": self.bouteilles,  # Liste des bouteilles stockées
-            "login": self.login  # Login de l'utilisateur associé
+            "_bouteilles": [b.consulter() for b in self.bouteilles],
+            "login": self.login  # Include the login attribute
         }
 
         # Insérer l'étagère dans la base de données
@@ -233,7 +238,7 @@ class Etagere(BaseModel):
         Retour :
         --------
         dict :
-            Message indiquant le succès ou l'échec de l'opération.
+            Un dictionnaire avec un message et un statut indiquant si l'opération a réussi ou échoué.
         """
         if not self.config_db:
             return {
@@ -241,7 +246,9 @@ class Etagere(BaseModel):
                 "status": 500,
             }
 
-        connex = Connexdb(**self.config_db)  # Crée une connexion à la base de données
+        connex: Connexdb = Connexdb(**self.config_db)
+        
+        # Prepare the data in the specified format
         data_etagere = {
             "num": self.num,
             "nb_place": self.nb_place,
@@ -250,8 +257,11 @@ class Etagere(BaseModel):
             "caves": self.cave
         }
 
-        # Mise à jour de l'étagère dans la base de données
-        rstatus = connex.update_data_from_collection(self.collections, {"num": self.num}, data_etagere)
+        rstatus = connex.update_data_from_collection(
+            self.collections,
+            {"num": self.num},  # Critère de mise à jour
+            data_etagere
+        )
 
         if rstatus.get("status") != 200:
             return {
@@ -263,27 +273,79 @@ class Etagere(BaseModel):
 
     def get_etageres(self) -> dict:
         """
-        Récupère les informations d'une étagère depuis la base de données.
+        Récupère les étagères de la base de données.
 
         Retour :
         --------
         dict :
-            Les informations de l'étagère ou un message d'erreur si échec.
+            Un dictionnaire contenant toutes les étagères.
         """
         if not self.config_db:
             return {
-                "message": "Configuration de la base de données manquante.",
+                "message": "Donner la configuration pour la base de données MongoDB",
                 "status": 500,
             }
 
-        connex = Connexdb(**self.config_db)  # Crée une connexion à la base de données
+        connex: Connexdb = Connexdb(**self.config_db)
+        result: dict = connex.get_all_data_from_collection(self.collections)
 
-        # Récupération des données de l'étagère
-        rstatus = connex.get_data_from_collection(self.collections, {"num": self.num})
-        if rstatus.get("status") != 200:
+        if result.get("status") != 200:
             return {
-                "message": "La récupération des données de l'étagère a échoué !",
-                "status": rstatus.get("status"),
+                "message": "La récupération des étagères a échoué !",
+                "status": result.get("status"),
             }
 
-        return rstatus
+        return {
+            "message": "Voici toutes les étagères.",
+            "status": 200,
+            "data": result['data'],
+        }
+    
+    def get_bouteille_etageres(self) -> dict:
+        """
+        Récupère les bouteilles des étagères de la base de données.
+
+        Retour :
+        --------
+        dict :
+            Un dictionnaire contenant toutes les étagères et les bouteilles qu'elles contiennent.
+        """
+        if not self.config_db:
+            return {
+                "message": "Donner la configuration pour la base de données MongoDB",
+                "status": 500,
+            }
+
+        connex: Connexdb = Connexdb(**self.config_db)
+        result = connex.get_all_data_from_collection(self.collections)
+
+        if result.get("status") != 200:
+            return {
+                "message": "La récupération des étagères a échoué !",
+                "status": result.get("status"),
+            }
+
+        return {
+            "message": "Voici toutes les étagères.",
+            "status": 200,
+            "data": result['data'],
+        }
+
+
+if __name__ == '__main__':
+    # Exemple d'utilisation
+    config_db = {
+        "host": 'localhost',
+        "port": 27018,
+        "username": "root",
+        "password": "wm7ze*2b"
+    }
+
+    # Créer une instance de Etagere
+    etagere = Etagere(num=1, nb_place=10, nb_bouteille=0, config_db=config_db)
+
+    # Créer une nouvelle étagère dans la base de données
+    print(etagere.create_etageres())
+
+    # Consulter les étagères
+    print(etagere.get_etageres())
