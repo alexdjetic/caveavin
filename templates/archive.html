@@ -16,22 +16,25 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {% for bouteille in archives %}
             <div class="bg-white rounded-lg shadow-lg p-6">
-                <img src="{{ bouteille.photo }}" alt="{{ bouteille.nom }}" class="w-full h-48 object-cover rounded-md mb-4">
+                {% if bouteille.photo %}
+                    <img src="data:image/jpeg;base64,{{ bouteille.photo | b64encode }}" alt="{{ bouteille.nom }}" class="w-full h-48 object-cover rounded-md mb-4">
+                {% else %}
+                    <img src="/static/images/placeholder.png" alt="{{ bouteille.nom }}" class="w-full h-48 object-cover rounded-md mb-4">
+                {% endif %}
                 <h2 class="text-xl font-semibold">{{ bouteille.nom }}</h2>
                 <p class="text-gray-600">Type: {{ bouteille.type }}</p>
                 <p class="text-gray-600">Année: {{ bouteille.annee }}</p>
                 <p class="text-gray-600">Région: {{ bouteille.region }}</p>
                 <p class="text-gray-600">Prix: {{ bouteille.prix }}€</p>
                 <p class="text-gray-600">Étagère: {{ bouteille.num_etagere }}</p>
-                <p class="text-gray-600">Moyenne: {{ bouteille.moyen }}</p>
-                <p class="text-gray-600">Commentaires: {{ bouteille.commentaire | join(", ") }}</p>
-                <div class="mt-4 flex justify-between">
-                    <a href="/bottle/{{ bouteille.nom }}" class="text-blue-500 hover:underline">Voir Détails</a>
-                    <a href="/bottle/restore/{{ bouteille.nom }}" class="text-green-500 hover:underline">Restaurer</a>
-                    <a href="/bottle/delete/{{ bouteille.nom }}" class="text-red-500 hover:underline" onclick="return confirm('Êtes-vous sûr de vouloir supprimer définitivement cette bouteille ?');">
-                        Supprimer
-                    </a>
-                </div>
+                <p class="text-gray-600">Moyenne: {{ bouteille.moyen if bouteille.moyen else "Non évaluée" }}</p>
+                <p class="text-gray-600">Commentaires:
+                    {% if bouteille.commentaires %}
+                        {{ bouteille.commentaires | join(", ") }}
+                    {% else %}
+                        Aucun commentaire
+                    {% endif %}
+                </p>
             </div>
             {% endfor %}
         </div>

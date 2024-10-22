@@ -8,6 +8,48 @@ from datetime import datetime
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
+
+@router.post("/search", response_class=HTMLResponse)
+async def search(
+        request: Request,
+        filtre: str = Form(...),
+        user_cookies: dict = Depends(get_user_cookies)
+):
+    # Transform the filter string into a regex pattern
+    regex_pattern = f".*{filtre}.*"  # Automatically wraps the input with '.*' for regex matching
+    # Create a query to search for the bottle using the transformed filter
+    query: dict = {"nom": {"$regex": regex_pattern, "$options": "i"}}  # Using regex for case-insensitive search
+
+    # Call the effectuer_operation_db function to fetch data from the database
+    response = effectuer_operation_db(config_db, "bouteille", "get", query=query)
+
+    # Check for errors in the response
+    if response.get("status") != 200:
+        error_message = response.get("message", "Une erreur s'est produite lors de la récupération des bouteilles.")
+        return templates.TemplateResponse("search_bouteille.html", {
+            "request": request,
+            **user_cookies,
+            "data": [],  # No data to show in case of an error
+            "error_message": error_message  # Pass the error message to the template
+        })
+    # Extract data from the response if successful
+    data = response.get("data", [])
+    # Print data for debugging
+    print(data)
+    # Check if data is empty and prepare the message accordingly
+    if not data:
+        message = "Aucune bouteille n'a été trouvée pour ce filtre."
+    else:
+        message = ""
+    return templates.TemplateResponse("search_bouteille.html", {
+        "request": request,
+        **user_cookies,
+        "data": data,
+        "message": message,  # Pass the message to the template
+        "error_message": "",  # Clear error message if there are no errors
+        "filtre": filtre
+    })
+
 @router.post("/add", response_class=JSONResponse)
 async def add_bouteille(
     request: Request,
@@ -90,50 +132,6 @@ async def add_bouteille(
         return JSONResponse(content={"status": "success", "message": "Bouteille ajoutée avec succès"})
     else:
         return JSONResponse(content={"status": "error", "message": result.get("message", "Échec de l'ajout de la bouteille")})
-
-@router.get("/{nom_bouteille}", response_class=HTMLResponse)
-async def get_bouteille(request: Request, nom_bouteille: str, user_cookies: dict = Depends(get_user_cookies)):
-    """
-    Récupère les détails d'une bouteille par son nom.
-
-    Parameters
-    ----------
-    request : Request
-        La requête HTTP.
-    nom_bouteille : str
-        Le nom de la bouteille à récupérer.
-    user_cookies : dict
-        Les cookies de l'utilisateur pour vérifier la connexion.
-
-    Returns
-    -------
-    HTMLResponse
-        La page HTML contenant les détails de la bouteille ou une page d'erreur.
-    """
-    print(f"Bouteille reçue : {nom_bouteille}")  # Impression pour débogage
-    # Vérifie si l'utilisateur est connecté
-    if not user_cookies["login"]:
-        return RedirectResponse(url="/user/login", status_code=302)
-
-    # Crée un objet Bouteille pour récupérer ses informations
-    bouteille = Bouteille(nom=nom_bouteille, config_db=config_db)
-    bottle_data = bouteille.get_all_information()
-
-    print(f"Données de la bouteille récupérées : {bottle_data}")  # Impression pour débogage
-
-    # Vérifie si la récupération des données a réussi
-    if bottle_data.get("status") != 200:
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            **user_cookies,
-            "message": bottle_data.get("message", "Échec de la récupération des informations de la bouteille"),
-        })
-
-    return templates.TemplateResponse("bottle_details.html", {
-        "request": request,
-        **user_cookies,
-        "data": bottle_data["data"]
-    })
 
 @router.get("/delete/{nom_bouteille}", response_class=HTMLResponse)
 async def del_bouteille(request: Request, nom_bouteille: str, user_cookies: dict = Depends(get_user_cookies)):
@@ -330,8 +328,61 @@ async def get_archiver_bouteille(request: Request, user_cookies: dict = Depends(
     # Crée un objet Bouteille pour récupérer ses informations
     archive_data: dict = recuperer_archives(config_db)
 
+    print(f"\n{archive_data}\n")
+
+    if archive_data.get("status") != 200:
+        return templates.TemplateResponse("archive.html", {
+            "request": request,
+            **user_cookies,
+            "archives": []
+        })
+
     return templates.TemplateResponse("archive.html", {
         "request": request,
         **user_cookies,
-        "archive": archive_data["archives"][0]
+        "archives": archive_data.get("archives", [])
+    })
+
+@router.get("/{nom_bouteille}", response_class=HTMLResponse)
+async def get_bouteille(request: Request, nom_bouteille: str, user_cookies: dict = Depends(get_user_cookies)):
+    """
+    Récupère les détails d'une bouteille par son nom.
+
+    Parameters
+    ----------
+    request : Request
+        La requête HTTP.
+    nom_bouteille : str
+        Le nom de la bouteille à récupérer.
+    user_cookies : dict
+        Les cookies de l'utilisateur pour vérifier la connexion.
+
+    Returns
+    -------
+    HTMLResponse
+        La page HTML contenant les détails de la bouteille ou une page d'erreur.
+    """
+    print(f"Bouteille reçue : {nom_bouteille}")  # Impression pour débogage
+    # Vérifie si l'utilisateur est connecté
+    if not user_cookies["login"]:
+        return RedirectResponse(url="/user/login", status_code=302)
+
+    # Crée un objet Bouteille pour récupérer ses informations
+    bouteille = Bouteille(nom=nom_bouteille, config_db=config_db)
+    bottle_data = bouteille.get_all_information()
+
+    print(f"Données de la bouteille récupérées : {bottle_data}")  # Impression pour débogage
+
+    # Vérifie si la récupération des données a réussi
+    if bottle_data.get("status") != 200:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            **user_cookies,
+            "message": bottle_data.get("message", "Échec de la récupération des informations de la bouteille"),
+        })
+
+    return templates.TemplateResponse("bottle_details.html", {
+        "request": request,
+        **user_cookies,
+        "data": bottle_data["data"]
     })

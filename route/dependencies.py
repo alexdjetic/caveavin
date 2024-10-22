@@ -371,6 +371,9 @@ def recuperer_archives(config_db: dict) -> dict:
         connex.close()
         return rstatus
 
+    # fermeture de la connexion
+    connex.close()
+
     return {
         "message": f"La liste des données de la collection archive a été récupérée avec succès !",
         "status": 200,
