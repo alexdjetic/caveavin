@@ -344,3 +344,35 @@ def recuperer_notes(config_db: dict, query: dict = None) -> dict:
         "status": 200,
         "notes": rstatus.get("data")
     }
+
+#######################################
+#####     Gestion des archives    #####
+#######################################
+
+def recuperer_archives(config_db: dict) -> dict:
+    """
+    Récupère des données de la collection spécifiée.
+
+    Parameters
+    ----------
+    config_db : dict
+        La configuration de la base de données.
+
+    Returns
+    -------
+    dict
+        Un dictionnaire avec le résultat de l'opération.
+    """
+    connex: Connexdb = Connexdb(**config_db)
+    rstatus: dict = connex.get_all_data_from_collection("archive")
+
+    # test si une erreur arrive dans la requète
+    if rstatus.get("status") != 200:
+        connex.close()
+        return rstatus
+
+    return {
+        "message": f"La liste des données de la collection archive a été récupérée avec succès !",
+        "status": 200,
+        "archives": rstatus.get("data")
+    }

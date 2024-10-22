@@ -35,8 +35,6 @@
                 <p class="text-gray-600">Commentaires: {{ bouteille.commentaire | join(", ") }}</p>
                 <div class="mt-4 flex justify-between">
                     <a href="/bottle/{{ nom_bouteille }}" class="text-blue-500 hover:underline">Voir Détails</a>
-                    <button onclick="showMoveBottlePopup('{{ nom_bouteille }}')" class="text-green-500 hover:underline">Déplacer</button>
-                    <a href="/bottle/update/{{ nom_bouteille }}" class="text-yellow-500 hover:underline">Mettre à jour</a>
                     <a href="/bottle/archive/{{ nom_bouteille }}" class="text-yellow-500 hover:underline">Archiver</a>
                     <a href="/bottle/delete/{{ nom_bouteille }}" class="text-red-500 hover:underline" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette bouteille ?');">
                         Supprimer

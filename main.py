@@ -8,7 +8,6 @@ from route.bouteille_route import router as bouteille_router
 from route.etagere_route import router as etagere_router
 from route.dependencies import get_user_cookies, config_db
 from log import RequestLoggingMiddleware
-import logging
 
 #########################
 ##### Configuration #####

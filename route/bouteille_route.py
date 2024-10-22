@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request, Depends, Form, HTTPException
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from Classes import Bouteille, Personne
-from .dependencies import config_db, get_user_cookies, effectuer_operation_db, ajouter_commentaire, ajouter_notes
+from .dependencies import config_db, get_user_cookies, effectuer_operation_db, ajouter_commentaire, ajouter_notes, recuperer_archives
 from datetime import datetime
 
 router = APIRouter()
@@ -308,3 +308,30 @@ async def comment_and_pair(
 
     # Redirect to the bottle details page
     return RedirectResponse(url=f"/bottle/{nom_bouteille}", status_code=302)
+
+@router.get("/archive/{nom_bouteille}", response_class=HTMLResponse)
+async def get_archiver_bouteille(request: Request, nom_bouteille: str, user_cookies: dict = Depends(get_user_cookies)):
+    # Vérifie si l'utilisateur est connecté
+    if not user_cookies["login"]:
+        return RedirectResponse(url="/user/login", status_code=302)
+
+    # Crée un objet Bouteille pour récupérer ses informations
+    bouteille: Bouteille = Bouteille(nom=nom_bouteille, config_db=config_db)
+    bouteille.archiver()
+
+    return RedirectResponse(url=f"/user/collection", status_code=302)
+
+@router.get("/get-archive", response_class=HTMLResponse)
+async def get_archiver_bouteille(request: Request, user_cookies: dict = Depends(get_user_cookies)):
+    # Vérifie si l'utilisateur est connecté
+    if not user_cookies["login"]:
+        return RedirectResponse(url="/user/login", status_code=302)
+
+    # Crée un objet Bouteille pour récupérer ses informations
+    archive_data: dict = recuperer_archives(config_db)
+
+    return templates.TemplateResponse("archive.html", {
+        "request": request,
+        **user_cookies,
+        "archive": archive_data["archives"][0]
+    })

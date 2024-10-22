@@ -9,14 +9,11 @@
             <div class="flex justify-between items-center mb-6">
                 <h1 class="text-2xl font-bold">{{ data.nom }} - Détails</h1>
                 <div class="space-x-4">
-                    <button onclick="showMoveBottlePopup('{{ data.nom }}')" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">
-                        Déplacer
-                    </button>
-                    <a href="/bottle/archive/{{ data.nom }}" class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600">
-                        Archiver
-                    </a>
                     <a href="/bottle/delete/{{ data.nom }}" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette bouteille ?');">
                         Supprimer
+                    </a>
+                    <a href="/bottle/archive/{{ data.nom }}" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette bouteille ?');">
+                        archiver
                     </a>
                 </div>
             </div>
